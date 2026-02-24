@@ -284,6 +284,117 @@
       margin: 0;
     }
 
+    .insurance-breakdown.hidden {
+      display: none;
+    }
+
+    .insurance-breakdown {
+      margin-top: 2rem;
+      padding-top: 1.75rem;
+      border-top: 1px solid rgba(26, 29, 33, 0.08);
+    }
+
+    .insurance-breakdown h3 {
+      font-family: 'Instrument Serif', Georgia, serif;
+      font-size: 1.25rem;
+      font-weight: 400;
+      color: var(--ink);
+      margin: 0 0 0.5rem;
+    }
+
+    .insurance-breakdown .intro {
+      font-size: 0.9375rem;
+      color: var(--ink-muted);
+      margin: 0 0 1.25rem;
+    }
+
+    .insurance-search-wrap {
+      margin-bottom: 1.25rem;
+    }
+
+    .insurance-search-wrap label {
+      font-size: 0.8125rem;
+      margin-bottom: 0.35rem;
+    }
+
+    .insurance-search-wrap input {
+      width: 100%;
+      padding: 0.6rem 0.75rem;
+      font: inherit;
+      font-size: 0.9375rem;
+      border: 1px solid #dde0e4;
+      border-radius: 8px;
+      color: var(--ink);
+      background: var(--surface);
+    }
+
+    .insurance-search-wrap input::placeholder {
+      color: var(--ink-muted);
+    }
+
+    .insurance-search-wrap input:focus {
+      outline: none;
+      border-color: var(--teal);
+      box-shadow: 0 0 0 3px rgba(13, 92, 99, 0.12);
+    }
+
+    .insurance-type-card {
+      background: var(--surface);
+      border: 1px solid rgba(26, 29, 33, 0.1);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.25rem;
+      margin-bottom: 1rem;
+    }
+
+    .insurance-type-card.hidden {
+      display: none;
+    }
+
+    .insurance-type-card h4 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--teal);
+      margin: 0 0 0.5rem;
+    }
+
+    .insurance-type-card .carriers {
+      font-size: 0.8125rem;
+      color: var(--ink-muted);
+      margin-bottom: 0.75rem;
+      line-height: 1.5;
+    }
+
+    .insurance-type-card .carriers strong {
+      color: var(--ink);
+    }
+
+    .insurance-type-card ul {
+      margin: 0;
+      padding-left: 1.25rem;
+      font-size: 0.875rem;
+      color: var(--ink);
+      line-height: 1.55;
+    }
+
+    .insurance-type-card ul li {
+      margin-bottom: 0.35rem;
+    }
+
+    .insurance-type-card ul li:last-child {
+      margin-bottom: 0;
+    }
+
+    .insurance-no-results {
+      font-size: 0.9375rem;
+      color: var(--ink-muted);
+      padding: 1rem 0;
+      display: none;
+    }
+
+    .insurance-no-results.visible {
+      display: block;
+    }
+
   </style>
 </head>
 <body>
@@ -321,13 +432,87 @@
     </form>
 
     <div id="result" class="result hidden" aria-live="polite"></div>
+    <div id="insurance-breakdown" class="insurance-breakdown hidden">
+      <h3>Why low premiums can mean less protection</h3>
+      <p class="intro">Different types of coverage come with different tradeoffs. Find your carrier or plan type to understand what you may be missing.</p>
+      <div class="insurance-search-wrap">
+        <label for="insurance-search">Search for your carrier or plan type</label>
+        <input type="text" id="insurance-search" placeholder="e.g. Aetna, short-term, ACA, Kaiser..." autocomplete="off">
+      </div>
+      <div id="insurance-type-cards"></div>
+      <p id="insurance-no-results" class="insurance-no-results">No plans match your search. Try a different carrier or type name.</p>
+    </div>
   </div>
 
   <script>
     const MULTIPLIER = 11.5;
 
+    const INSURANCE_TYPES = [
+      {
+        type: 'Short-term',
+        carriers: ['Aetna', 'Health Protector Guard', 'Kemper', 'Philadelphia Life / Health Choice'],
+        points: [
+          'Underwritten at the time of claim — they don’t accept pre-existing conditions even if disclosed on the application.',
+          'They don’t cover anything related to the back, neck, or spine (or coverage is extremely limited).',
+          'If you have a claim on your short-term plan and then it expires, you may not be able to get another one, or any other underwritten plan.',
+          'They are cheap for a reason; you get what you pay for.',
+          'They have caps on coverage.'
+        ]
+      },
+      {
+        type: 'Limited benefit',
+        carriers: ['Advent Health', 'Agile', 'Aspen', 'Cardinal Choice', 'Chubb', 'IHC', 'Lifeshield', 'National General / Aetna', 'Select Pivot Health', 'Standard Life', 'United Golden Rule', 'United Tri Term'],
+        points: [
+          'No out-of-pocket maximums — tons of exposure.',
+          'Cheap for a reason; you get what you pay for.',
+          'Only pays fixed benefit amounts with very limited coverage.'
+        ]
+      },
+      {
+        type: 'ACA / Obamacare / Marketplace',
+        carriers: ['Ambetter', 'CareSource', 'BCBS', 'Bright Health', 'Cigna', 'Health Alliance', 'Kaiser Permanente', 'McLaren Health', 'Medica', 'MedMutual', 'Oscar', 'Priority Health', 'Select Health', 'United', 'UPMC', 'Vantage Health Plan', 'Wellmark'],
+        points: [
+          'Often best for people who are low income or have significant health needs.',
+          'Can be highly expensive otherwise, with huge deductibles.',
+          'No nationwide coverage — HMOs or EPOs mean no out-of-network coverage; PPOs if any are local only.'
+        ]
+      },
+      {
+        type: 'Health share (Christian co-op)',
+        carriers: ['ASH - Shared Health', 'CHM Christian Health Ministries', 'Liberty Health', 'OneShare Health'],
+        points: [
+          'There is no actual insurance contract, so no guarantee of payment.',
+          'Payment of claims comes directly from other members, not the organization, and is paid to the customer, not the facility.',
+          '100% voluntary payment of claims, decided based on the volume of claims at any given time.',
+          'Not regulated by the Department of Insurance.',
+          'Not intended to replace health insurance.'
+        ]
+      },
+      {
+        type: 'Group / Employer',
+        carriers: ['Aetna', 'AZ Banner Broad PPO', 'BCBS', 'Humana', 'United'],
+        points: [
+          'Good for people with pre-existing conditions.',
+          'Same basic structure as ACA.',
+          'Worth considering if the group plan is too expensive, you’re leaving your company, or it’s too expensive to add the family.'
+        ]
+      },
+      {
+        type: 'Medicaid',
+        carriers: ['AZ Complete Health', 'Banner-Family Care', 'Care1st Health Plan', 'Magellan Complete Care', 'Molina', 'TennCare'],
+        points: [
+          'May not be an option depending on eligibility.',
+          'If you’re looking into alternatives, it can help to understand why — for example, did you lose coverage?'
+        ]
+      }
+    ];
+
     const form = document.getElementById('form');
     const resultEl = document.getElementById('result');
+    const insuranceBreakdown = document.getElementById('insurance-breakdown');
+    const insuranceCardsContainer = document.getElementById('insurance-type-cards');
+    const insuranceSearch = document.getElementById('insurance-search');
+    const insuranceNoResults = document.getElementById('insurance-no-results');
     const addSpouseBtn = document.getElementById('add-spouse');
     const spouseContainer = document.getElementById('spouse-fields');
     const addChildBtn = document.getElementById('add-child');
@@ -379,6 +564,45 @@
 
     function benchmark(age) {
       return Math.round(age * MULTIPLIER);
+    }
+
+    function matchesSearch(item, q) {
+      if (!q || !q.trim()) return true;
+      const lower = q.trim().toLowerCase();
+      if (item.type.toLowerCase().includes(lower)) return true;
+      return item.carriers.some(c => c.toLowerCase().includes(lower));
+    }
+
+    function renderInsuranceCards(filter) {
+      const q = (filter == null ? (insuranceSearch && insuranceSearch.value) : filter) || '';
+      const lower = q.trim().toLowerCase();
+      let visible = 0;
+      insuranceCardsContainer.innerHTML = INSURANCE_TYPES.map(item => {
+        const show = matchesSearch(item, q);
+        if (show) visible++;
+        const filteredCarriers = lower
+          ? item.carriers.filter(c => c.toLowerCase().includes(lower))
+          : item.carriers;
+        const carriersText = filteredCarriers.length > 0
+          ? 'Examples: ' + filteredCarriers.join(', ')
+          : '';
+        const pointsList = item.points.map(p => `<li>${p}</li>`).join('');
+        return `
+          <div class="insurance-type-card ${show ? '' : 'hidden'}" data-type="${item.type.replace(/"/g, '&quot;')}">
+            <h4>${item.type}</h4>
+            ${carriersText ? `<div class="carriers">${carriersText}</div>` : ''}
+            <ul>${pointsList}</ul>
+          </div>
+        `;
+      }).join('');
+      if (insuranceNoResults) {
+        insuranceNoResults.classList.toggle('visible', visible === 0 && q.trim().length > 0);
+      }
+    }
+
+    if (insuranceSearch) {
+      insuranceSearch.addEventListener('input', () => renderInsuranceCards());
+      insuranceSearch.addEventListener('keyup', () => renderInsuranceCards());
     }
 
     form.addEventListener('submit', (e) => {
@@ -443,6 +667,15 @@
           </div>
         </div>
       `;
+
+      if (diff < -50) {
+        insuranceBreakdown.classList.remove('hidden');
+        if (insuranceSearch) insuranceSearch.value = '';
+        renderInsuranceCards('');
+      } else {
+        insuranceBreakdown.classList.add('hidden');
+      }
+
       resultEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     });
   </script>
