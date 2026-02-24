@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Are You Paying Too Much for Health Insurance?</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #faf9f6;
+      --surface: #ffffff;
+      --ink: #1a1d21;
+      --ink-muted: #5c6268;
+      --accent: #c45c26;
+      --accent-soft: #e8b89a;
+      --teal: #0d5c63;
+      --teal-soft: #7eb8bc;
+      --success: #2d6a4f;
+      --warning: #b5651d;
+      --radius: 12px;
+      --shadow: 0 4px 24px rgba(26, 29, 33, 0.06);
+      --shadow-hover: 0 8px 32px rgba(26, 29, 33, 0.1);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: 'DM Sans', system-ui, sans-serif;
+      font-size: 1rem;
+      line-height: 1.6;
+      color: var(--ink);
+      background: var(--bg);
+      background-image:
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(13, 92, 99, 0.08), transparent),
+        radial-gradient(ellipse 60% 40% at 100% 100%, rgba(196, 92, 38, 0.06), transparent);
+    }
+
+    .wrap {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+      animation: fadeUp 0.6s ease-out;
+    }
+
+    h1 {
+      font-family: 'Instrument Serif', Georgia, serif;
+      font-size: clamp(1.75rem, 5vw, 2.25rem);
+      font-weight: 400;
+      color: var(--ink);
+      margin: 0 0 0.5rem;
+      line-height: 1.2;
+    }
+
+    .sub {
+      font-size: 0.9375rem;
+      color: var(--ink-muted);
+      margin: 0;
+    }
+
+    .rule {
+      font-size: 0.8125rem;
+      color: var(--teal);
+      margin-top: 0.75rem;
+      padding: 0.5rem 0.75rem;
+      background: rgba(13, 92, 99, 0.08);
+      border-radius: 8px;
+      display: inline-block;
+    }
+
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 1.5rem 1.75rem;
+      margin-bottom: 1.25rem;
+      animation: fadeUp 0.5s ease-out backwards;
+    }
+
+    .card:nth-child(1) { animation-delay: 0.05s; }
+    .card:nth-child(2) { animation-delay: 0.1s; }
+    .card:nth-child(3) { animation-delay: 0.15s; }
+    .card:nth-child(4) { animation-delay: 0.2s; }
+    .card:nth-child(5) { animation-delay: 0.25s; }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(12px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .card-title {
+      font-family: 'Instrument Serif', Georgia, serif;
+      font-size: 1.125rem;
+      font-weight: 400;
+      color: var(--ink);
+      margin: 0 0 1rem;
+    }
+
+    label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--ink);
+      margin-bottom: 0.35rem;
+    }
+
+    input[type="number"] {
+      width: 100%;
+      padding: 0.65rem 0.75rem;
+      font: inherit;
+      font-size: 1rem;
+      border: 1px solid #dde0e4;
+      border-radius: 8px;
+      color: var(--ink);
+      background: var(--surface);
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    input[type="number"]:focus {
+      outline: none;
+      border-color: var(--teal);
+      box-shadow: 0 0 0 3px rgba(13, 92, 99, 0.15);
+    }
+
+    .row {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .row:last-child {
+      margin-bottom: 0;
+    }
+
+    .field {
+      flex: 1;
+    }
+
+    .children-list {
+      margin-top: 0.75rem;
+    }
+
+    .child-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.75rem;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+
+    .btn {
+      font: inherit;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      border-radius: 8px;
+      padding: 0.6rem 1rem;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn-secondary {
+      background: rgba(13, 92, 99, 0.12);
+      color: var(--teal);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(13, 92, 99, 0.2);
+    }
+
+    .btn-remove {
+      background: rgba(26, 29, 33, 0.08);
+      color: var(--ink-muted);
+      padding: 0.5rem 0.75rem;
+      font-size: 0.875rem;
+    }
+
+    .btn-remove:hover {
+      background: rgba(26, 29, 33, 0.14);
+      color: var(--ink);
+    }
+
+    .btn-primary {
+      width: 100%;
+      padding: 0.9rem 1.5rem;
+      font-size: 1rem;
+      background: var(--accent);
+      color: #fff;
+      margin-top: 0.5rem;
+    }
+
+    .btn-primary:hover {
+      background: #a84d1f;
+      box-shadow: 0 4px 16px rgba(196, 92, 38, 0.35);
+    }
+
+    .result {
+      margin-top: 2rem;
+      padding: 1.75rem 1.75rem;
+      border-radius: var(--radius);
+      text-align: center;
+      animation: fadeUp 0.4s ease-out;
+    }
+
+    .result.hidden {
+      display: none;
+    }
+
+    .result.over {
+      background: rgba(181, 101, 29, 0.12);
+      border: 1px solid rgba(181, 101, 29, 0.3);
+    }
+
+    .result.ok {
+      background: rgba(45, 106, 79, 0.1);
+      border: 1px solid rgba(45, 106, 79, 0.25);
+    }
+
+    .result.under {
+      background: rgba(13, 92, 99, 0.1);
+      border: 1px solid rgba(13, 92, 99, 0.25);
+    }
+
+    .result-verdict {
+      font-family: 'Instrument Serif', Georgia, serif;
+      font-size: 1.5rem;
+      margin: 0 0 0.5rem;
+    }
+
+    .result.over .result-verdict { color: var(--warning); }
+    .result.ok .result-verdict { color: var(--success); }
+    .result.under .result-verdict { color: var(--teal); }
+
+    .result-detail {
+      font-size: 0.9375rem;
+      color: var(--ink-muted);
+      margin: 0 0 1rem;
+    }
+
+    .result-numbers {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      flex-wrap: wrap;
+      margin-top: 1rem;
+    }
+
+    .result-num {
+      text-align: center;
+    }
+
+    .result-num span {
+      display: block;
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    .result-num label {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--ink-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin: 0;
+    }
+
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Are You Paying Too Much for Health Insurance?</h1>
+      <p class="sub">Compare your monthly premium to a common benchmark.</p>
+    </header>
+
+    <form id="form" class="card">
+      <h2 class="card-title">Your household</h2>
+
+      <div class="row">
+        <div class="field">
+          <label for="age">Your age</label>
+          <input type="number" id="age" name="age" min="18" max="120" placeholder="e.g. 34" required>
+        </div>
+        <div class="field">
+          <label for="premium">Your monthly premium ($)</label>
+          <input type="number" id="premium" name="premium" min="0" step="1" placeholder="e.g. 420" required>
+        </div>
+      </div>
+
+      <div style="margin-top: 1rem;">
+        <button type="button" class="btn btn-secondary" id="add-spouse">+ Add spouse</button>
+      </div>
+      <div id="spouse-fields" class="children-list"></div>
+
+      <div style="margin-top: 1rem;">
+        <button type="button" class="btn btn-secondary" id="add-child">+ Add child</button>
+      </div>
+      <div id="children-fields" class="children-list"></div>
+
+      <button type="submit" class="btn btn-primary">See if you're overpaying</button>
+    </form>
+
+    <div id="result" class="result hidden" aria-live="polite"></div>
+  </div>
+
+  <script>
+    const MULTIPLIER = 11.5;
+
+    const form = document.getElementById('form');
+    const resultEl = document.getElementById('result');
+    const addSpouseBtn = document.getElementById('add-spouse');
+    const spouseContainer = document.getElementById('spouse-fields');
+    const addChildBtn = document.getElementById('add-child');
+    const childrenContainer = document.getElementById('children-fields');
+
+    let childCount = 0;
+
+    addSpouseBtn.addEventListener('click', () => {
+      if (spouseContainer.querySelector('.spouse-row')) return;
+      const row = document.createElement('div');
+      row.className = 'child-row spouse-row';
+      row.innerHTML = `
+        <div class="field">
+          <label for="spouse-age">Spouse's age</label>
+          <input type="number" id="spouse-age" name="spouseAge" min="18" max="120" placeholder="e.g. 32">
+        </div>
+        <div>
+          <button type="button" class="btn btn-remove btn-remove-spouse">Remove</button>
+        </div>
+      `;
+      row.querySelector('.btn-remove-spouse').addEventListener('click', () => {
+        row.remove();
+        addSpouseBtn.style.display = '';
+      });
+      spouseContainer.appendChild(row);
+      addSpouseBtn.style.display = 'none';
+    });
+
+    addChildBtn.addEventListener('click', () => {
+      childCount++;
+      const id = `child-age-${childCount}`;
+      const row = document.createElement('div');
+      row.className = 'child-row';
+      row.dataset.childId = String(childCount);
+      row.innerHTML = `
+        <div class="field">
+          <label for="${id}">Child ${childCount} age</label>
+          <input type="number" id="${id}" name="childAge" min="0" max="25" placeholder="e.g. 8">
+        </div>
+        <div>
+          <button type="button" class="btn btn-remove btn-remove-child">Remove</button>
+        </div>
+      `;
+      row.querySelector('.btn-remove-child').addEventListener('click', () => {
+        row.remove();
+      });
+      childrenContainer.appendChild(row);
+    });
+
+    function benchmark(age) {
+      return Math.round(age * MULTIPLIER);
+    }
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+
+      const age = parseInt(document.getElementById('age').value, 10);
+      const premium = parseFloat(document.getElementById('premium').value);
+      if (!age || !premium) return;
+
+      let totalBenchmark = benchmark(age);
+      const ages = [age];
+
+      const spouseInput = document.querySelector('input[name="spouseAge"]');
+      if (spouseInput) {
+        const spouseAge = parseInt(spouseInput.value, 10);
+        if (spouseAge) {
+          totalBenchmark += benchmark(spouseAge);
+          ages.push(spouseAge);
+        }
+      }
+
+      const childInputs = document.querySelectorAll('input[name="childAge"]');
+      childInputs.forEach((input) => {
+        const a = parseInt(input.value, 10);
+        if (a >= 0 && a <= 25) {
+          totalBenchmark += benchmark(a);
+          ages.push(a);
+        }
+      });
+
+      const diff = premium - totalBenchmark;
+      const pct = totalBenchmark > 0 ? Math.round((diff / totalBenchmark) * 100) : 0;
+
+      resultEl.classList.remove('hidden', 'over', 'ok', 'under');
+
+      let verdict, detail;
+      if (diff > 50) {
+        resultEl.classList.add('over');
+        verdict = "You're likely paying too much";
+        detail = `Your premium is about $${Math.abs(diff).toLocaleString()} above the benchmark each month.`;
+      } else if (diff >= -50) {
+        resultEl.classList.add('ok');
+        verdict = "You're in the ballpark";
+        detail = `Your premium is close to the typical benchmark.`;
+      } else {
+        resultEl.classList.add('under');
+        verdict = "You're below the benchmark";
+        detail = `Your premium is about $${Math.abs(diff).toLocaleString()} below the typical benchmark.`;
+      }
+
+      resultEl.innerHTML = `
+        <p class="result-verdict">${verdict}</p>
+        <p class="result-detail">${detail}</p>
+        <div class="result-numbers">
+          <div class="result-num">
+            <span>$${premium.toLocaleString()}</span>
+            <label>Your premium</label>
+          </div>
+          <div class="result-num">
+            <span>$${totalBenchmark.toLocaleString()}</span>
+            <label>Benchmark</label>
+          </div>
+        </div>
+      `;
+      resultEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+  </script>
+</body>
+</html>
