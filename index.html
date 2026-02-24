@@ -657,19 +657,20 @@
       });
 
       const diff = premium - totalBenchmark;
-      const pct = totalBenchmark > 0 ? Math.round((diff / totalBenchmark) * 100) : 0;
+      const ballparkPct = 0.1;
+      const threshold = totalBenchmark * ballparkPct;
 
       resultEl.classList.remove('hidden', 'over', 'ok', 'under');
 
       let verdict, detail;
-      if (diff > 50) {
+      if (diff > threshold) {
         resultEl.classList.add('over');
         verdict = "You're likely paying too much";
         detail = `Your premium is about $${Math.abs(diff).toLocaleString()} above the benchmark each month.`;
-      } else if (diff >= -50) {
+      } else if (diff >= -threshold) {
         resultEl.classList.add('ok');
         verdict = "You're in the ballpark";
-        detail = `Your premium is close to the typical benchmark.`;
+        detail = `Your premium is within ${Math.round(ballparkPct * 100)}% of the typical benchmark.`;
       } else {
         resultEl.classList.add('under');
         verdict = "You're below the benchmark";
@@ -690,11 +691,11 @@
           </div>
         </div>
         <div class="result-cta">
-          <a href="https://meet.richards.health" target="_blank" rel="noopener">Learn about your ideal options</a>
+          <a href="https://meet.richards.health" target="_blank" rel="noopener">Learn more about your ideal options</a>
         </div>
       `;
 
-      if (diff < -50) {
+      if (diff < -threshold) {
         insuranceBreakdown.classList.remove('hidden');
         if (insuranceSearch) insuranceSearch.value = '';
         renderInsuranceCards('');
