@@ -284,6 +284,29 @@
       margin: 0;
     }
 
+    .result-cta {
+      margin-top: 1.5rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid rgba(26, 29, 33, 0.08);
+    }
+
+    .result-cta a {
+      display: inline-block;
+      padding: 0.65rem 1.25rem;
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: #fff;
+      background: var(--teal);
+      border-radius: 8px;
+      text-decoration: none;
+      transition: background 0.2s, box-shadow 0.2s;
+    }
+
+    .result-cta a:hover {
+      background: #0a4a50;
+      box-shadow: 0 4px 12px rgba(13, 92, 99, 0.3);
+    }
+
     .insurance-breakdown.hidden {
       display: none;
     }
@@ -665,6 +688,9 @@
             <span>$${totalBenchmark.toLocaleString()}</span>
             <label>Benchmark</label>
           </div>
+        </div>
+        <div class="result-cta">
+          <a href="https://meet.richards.health" target="_blank" rel="noopener">Learn about your ideal options</a>
         </div>
       `;
 
