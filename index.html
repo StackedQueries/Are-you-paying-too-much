@@ -676,7 +676,9 @@
         insuranceBreakdown.classList.add('hidden');
       }
 
-      resultEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      requestAnimationFrame(() => {
+        resultEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
     });
   </script>
 </body>
