@@ -553,6 +553,7 @@
 
     addSpouseBtn.addEventListener('click', () => {
       if (spouseContainer.querySelector('.spouse-row')) return;
+      track('add_spouse', { event_category: 'engagement' });
       const row = document.createElement('div');
       row.className = 'child-row spouse-row';
       row.innerHTML = `
@@ -574,6 +575,7 @@
 
     addChildBtn.addEventListener('click', () => {
       childCount++;
+      track('add_child', { event_category: 'engagement', child_number: childCount });
       const id = `child-age-${childCount}`;
       const row = document.createElement('div');
       row.className = 'child-row';
@@ -636,6 +638,23 @@
       insuranceSearch.addEventListener('keyup', () => renderInsuranceCards());
     }
 
+    function track(eventName, params) {
+      if (typeof gtag === 'function') {
+        gtag('event', eventName, params || {});
+      }
+    }
+
+    resultEl.addEventListener('click', (e) => {
+      const link = e.target.closest('.result-cta a');
+      if (link) {
+        track('cta_click', {
+          event_category: 'engagement',
+          event_label: link.textContent.trim(),
+          outbound_url: link.href
+        });
+      }
+    });
+
     form.addEventListener('submit', (e) => {
       e.preventDefault();
 
@@ -645,6 +664,8 @@
 
       let totalBenchmark = benchmark(age);
       const ages = [age];
+      let hasSpouse = false;
+      let childCount = 0;
 
       const spouseInput = document.querySelector('input[name="spouseAge"]');
       if (spouseInput) {
@@ -652,6 +673,7 @@
         if (spouseAge) {
           totalBenchmark += benchmark(spouseAge);
           ages.push(spouseAge);
+          hasSpouse = true;
         }
       }
 
@@ -661,6 +683,7 @@
         if (a >= 0 && a <= 25) {
           totalBenchmark += benchmark(a);
           ages.push(a);
+          childCount++;
         }
       });
 
@@ -670,20 +693,33 @@
 
       resultEl.classList.remove('hidden', 'over', 'ok', 'under');
 
-      let verdict, detail;
+      let verdict, detail, resultType;
       if (diff > threshold) {
         resultEl.classList.add('over');
         verdict = "You're likely paying too much";
         detail = `Your premium is about $${Math.abs(diff).toLocaleString()} above the benchmark each month.`;
+        resultType = 'over';
       } else if (diff >= -threshold) {
         resultEl.classList.add('ok');
         verdict = "You're in the ballpark";
         detail = `Your premium is within ${Math.round(ballparkPct * 100)}% of the typical benchmark.`;
+        resultType = 'ballpark';
       } else {
         resultEl.classList.add('under');
         verdict = "You're below the benchmark";
         detail = `Your premium is about $${Math.abs(diff).toLocaleString()} below the typical benchmark.`;
+        resultType = 'under';
       }
+
+      track('premium_check', {
+        event_category: 'form',
+        result_type: resultType,
+        premium: premium,
+        benchmark: totalBenchmark,
+        has_spouse: hasSpouse,
+        child_count: childCount,
+        household_size: ages.length
+      });
 
       resultEl.innerHTML = `
         <p class="result-verdict">${verdict}</p>
