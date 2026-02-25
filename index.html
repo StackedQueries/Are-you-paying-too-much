@@ -721,6 +721,7 @@
         household_size: ages.length
       });
 
+      const hideCta = new URLSearchParams(window.location.search).get('type') === 'group';
       resultEl.innerHTML = `
         <p class="result-verdict">${verdict}</p>
         <p class="result-detail">${detail}</p>
@@ -734,9 +735,9 @@
             <label>Benchmark</label>
           </div>
         </div>
-        <div class="result-cta">
+        ${hideCta ? '' : `<div class="result-cta">
           <a href="https://meet.richards.health" target="_blank" rel="noopener">Learn more about your ideal options</a>
-        </div>
+        </div>`}
       `;
 
       if (diff < -threshold) {
