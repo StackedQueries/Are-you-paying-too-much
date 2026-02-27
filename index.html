@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Am I Paying Too Much?</title>
+  <title>Health Insurance Benchmark Tool for Self-Employed Business Owners</title>
+  <meta name="description" content="Premium benchmark tool for self-employed business owners and independent contractors across Georgia, Texas, Florida, North Carolina, Ohio, and 24 additional states. Compare your health insurance premium to typical ranges without triggering a quote or application.">
+  <meta name="keywords" content="self-employed health insurance, contractor health plans, individual coverage strategy, health insurance benchmark tool">
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-254XYCPKN3"></script>
   <script>
@@ -103,7 +105,7 @@
       box-shadow: 0 4px 24px rgba(15, 23, 42, 0.08);
       border: 1px solid var(--rh-neutral-300);
       padding: 1.5rem 1.75rem;
-      margin-bottom: 1.25rem;
+      margin-bottom: 1.75rem;
       animation: fadeUp 0.5s var(--rh-ease) backwards;
     }
 
@@ -240,7 +242,7 @@
     }
 
     .result {
-      margin-top: 2rem;
+      margin: 1.75rem 0;
       padding: 1.75rem 1.75rem;
       border-radius: var(--rh-radius-lg);
       text-align: center;
@@ -311,6 +313,12 @@
       margin-top: 1.5rem;
       padding-top: 1.25rem;
       border-top: 1px solid var(--rh-neutral-300);
+    }
+
+    .result-cta p {
+      margin: 0.5rem 0 0;
+      font-size: 0.8125rem;
+      color: var(--rh-neutral-700);
     }
 
     .result-cta a {
@@ -433,12 +441,13 @@
 <body>
   <div class="wrap">
     <header>
-      <h1>Am I Paying Too Much?</h1>
-      <p class="sub">Compare your monthly premium to a common benchmark.</p>
-      <p class="rule" aria-hidden="true">Richards Health</p>
+      <h1>Are You Structuring Your Health Coverage Correctly?</h1>
+      <p class="sub">Most self-employed operators don’t overpay. They misunderstand their real exposure.</p>
+      <p class="rule" aria-hidden="true">A quick benchmark tool for independent business owners.</p>
     </header>
 
     <form id="form" class="card">
+      <p id="benchmark-note" class="sub" style="margin-bottom: 1.25rem;">This tool provides a simple benchmark based on age and household size. It’s not a quote and not underwriting — just a fast way to see whether your premium may be misaligned with typical structures.</p>
       <h2 class="card-title">Your household</h2>
 
       <div class="row">
@@ -462,7 +471,7 @@
       </div>
       <div id="children-fields" class="children-list"></div>
 
-      <button type="submit" class="btn btn-primary">See if you're overpaying</button>
+      <button type="submit" class="btn btn-primary">See My Cost Benchmark</button>
     </form>
 
     <div id="result" class="result hidden" aria-live="polite"></div>
@@ -476,6 +485,22 @@
       <div id="insurance-type-cards"></div>
       <p id="insurance-no-results" class="insurance-no-results">No plans match your search. Try a different carrier or type name.</p>
     </div>
+
+    <section class="card" id="who-tool-card">
+      <h2 class="card-title">Who This Tool Is For</h2>
+      <ul>
+        <li>Self-employed business owners</li>
+        <li>Independent contractors and 1099 earners</li>
+        <li>Founders without employer-sponsored coverage</li>
+        <li>Operators reviewing individual health plans</li>
+      </ul>
+      <p>If you operate independently and want clarity around your coverage structure, this tool is built for you.</p>
+    </section>
+
+    <section class="card" id="why-benchmark-card">
+      <h2 class="card-title">Why Benchmark Alone Isn’t Enough</h2>
+      <p>Premium is only one variable. Real exposure depends on deductible structure, out-of-pocket maximums, network limitations, underwriting rules, and plan design. Two households paying the same premium can experience dramatically different financial outcomes in a claim year.</p>
+    </section>
   </div>
 
   <script>
@@ -551,6 +576,36 @@
     const spouseContainer = document.getElementById('spouse-fields');
     const addChildBtn = document.getElementById('add-child');
     const childrenContainer = document.getElementById('children-fields');
+
+    const urlType = new URLSearchParams(window.location.search).get('type');
+    const isGroup = urlType === 'group';
+
+    if (isGroup) {
+      const heroTitle = document.querySelector('header h1');
+      if (heroTitle) {
+        heroTitle.textContent = 'Am I Paying Too Much?';
+      }
+      const heroSub = document.querySelector('header .sub');
+      if (heroSub) {
+        heroSub.textContent = 'Compare your monthly premium to a common benchmark.';
+      }
+      const benchmarkNote = document.getElementById('benchmark-note');
+      if (benchmarkNote) {
+        benchmarkNote.style.display = 'none';
+      }
+      const submitBtn = document.querySelector('#form .btn-primary');
+      if (submitBtn) {
+        submitBtn.textContent = "See if you're overpaying";
+      }
+      const whoCard = document.getElementById('who-tool-card');
+      if (whoCard) {
+        whoCard.style.display = 'none';
+      }
+      const whyCard = document.getElementById('why-benchmark-card');
+      if (whyCard) {
+        whyCard.style.display = 'none';
+      }
+    }
 
     let childCount = 0;
 
@@ -693,24 +748,41 @@
       const diff = premium - totalBenchmark;
       const ballparkPct = 0.1;
       const threshold = totalBenchmark * ballparkPct;
+      const urlType = new URLSearchParams(window.location.search).get('type');
+      const isGroup = urlType === 'group';
 
       resultEl.classList.remove('hidden', 'over', 'ok', 'under');
 
       let verdict, detail, resultType;
       if (diff > threshold) {
         resultEl.classList.add('over');
-        verdict = "You're likely paying too much";
-        detail = `Your premium is about $${Math.abs(diff).toLocaleString()} above the benchmark each month.`;
+        if (isGroup) {
+          verdict = "You're likely paying too much";
+          detail = `Your premium is about $${Math.abs(diff).toLocaleString()} above the benchmark each month.`;
+        } else {
+          verdict = "Your structure may be inefficient.";
+          detail = "Your premium appears higher than typical benchmarks for your household size. That doesn't automatically mean you're overpaying — but it suggests your coverage structure may deserve review.";
+        }
         resultType = 'over';
       } else if (diff >= -threshold) {
         resultEl.classList.add('ok');
-        verdict = "You're in the ballpark";
-        detail = `Your premium is within ${Math.round(ballparkPct * 100)}% of the typical benchmark.`;
+        if (isGroup) {
+          verdict = "You're in the ballpark";
+          detail = `Your premium is within ${Math.round(ballparkPct * 100)}% of the typical benchmark.`;
+        } else {
+          verdict = "You're within a typical range.";
+          detail = "Your premium aligns with common benchmarks. The more important question is whether the structure behind it matches your risk tolerance and income profile.";
+        }
         resultType = 'ballpark';
       } else {
         resultEl.classList.add('under');
-        verdict = "You're below the benchmark";
-        detail = `Your premium is about $${Math.abs(diff).toLocaleString()} below the typical benchmark.`;
+        if (isGroup) {
+          verdict = "You're below the benchmark";
+          detail = `Your premium is about $${Math.abs(diff).toLocaleString()} below the typical benchmark.`;
+        } else {
+          verdict = "Low premium does not always mean low risk.";
+          detail = "Your premium is below typical benchmarks. That can be positive — but it may also indicate limited coverage, underwriting exposure, or capped benefits. Structure matters more than price.";
+        }
         resultType = 'under';
       }
 
@@ -724,7 +796,7 @@
         household_size: ages.length
       });
 
-      const hideCta = new URLSearchParams(window.location.search).get('type') === 'group';
+      const hideCta = isGroup;
       resultEl.innerHTML = `
         <p class="result-verdict">${verdict}</p>
         <p class="result-detail">${detail}</p>
@@ -739,7 +811,8 @@
           </div>
         </div>
         ${hideCta ? '' : `<div class="result-cta">
-          <a href="https://richards.health" target="_blank" rel="noopener">Learn more about your ideal options</a>
+          <a href="https://richards.health" target="_blank" rel="noopener">Request a Structured Coverage Review</a>
+          <p class="sub" style="margin-top: 0.5rem;">Not a quote form. A structured review built for independent operators.</p>
         </div>`}
       `;
 
