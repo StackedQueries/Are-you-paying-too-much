@@ -14,22 +14,33 @@
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #faf9f6;
-      --surface: #ffffff;
-      --ink: #1a1d21;
-      --ink-muted: #5c6268;
-      --accent: #c45c26;
-      --accent-soft: #e8b89a;
-      --teal: #0d5c63;
-      --teal-soft: #7eb8bc;
-      --success: #2d6a4f;
-      --warning: #b5651d;
-      --radius: 12px;
-      --shadow: 0 4px 24px rgba(26, 29, 33, 0.06);
-      --shadow-hover: 0 8px 32px rgba(26, 29, 33, 0.1);
+      /* Richards Health — style guide */
+      --rh-primary: #0d9488;
+      --rh-primary-dark: #0f766e;
+      --rh-primary-light: #2dd4bf;
+      --rh-primary-muted: #ccfbf1;
+      --rh-secondary: #f43f5e;
+      --rh-secondary-dark: #e11d48;
+      --rh-trust: #0c4a6e;
+      --rh-trust-light: #0ea5e9;
+      --rh-trust-muted: #e0f2fe;
+      --rh-neutral-900: #0f172a;
+      --rh-neutral-700: #334155;
+      --rh-neutral-500: #64748b;
+      --rh-neutral-300: #cbd5e1;
+      --rh-neutral-100: #f1f5f9;
+      --rh-neutral-50: #f8fafc;
+      --rh-white: #ffffff;
+      --rh-font-display: "Syne", "Plus Jakarta Sans", system-ui, sans-serif;
+      --rh-font-body: "Plus Jakarta Sans", system-ui, sans-serif;
+      --rh-radius-sm: 6px;
+      --rh-radius-md: 10px;
+      --rh-radius-lg: 14px;
+      --rh-ease: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      --rh-duration: 0.2s;
     }
 
     * {
@@ -39,14 +50,14 @@
     body {
       margin: 0;
       min-height: 100vh;
-      font-family: 'DM Sans', system-ui, sans-serif;
+      font-family: var(--rh-font-body);
       font-size: 1rem;
       line-height: 1.6;
-      color: var(--ink);
-      background: var(--bg);
+      color: var(--rh-neutral-900);
+      background: var(--rh-neutral-50);
       background-image:
-        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(13, 92, 99, 0.08), transparent),
-        radial-gradient(ellipse 60% 40% at 100% 100%, rgba(196, 92, 38, 0.06), transparent);
+        radial-gradient(ellipse 80% 50% at 50% -20%, var(--rh-primary-muted) 0%, transparent 55%),
+        radial-gradient(ellipse 60% 40% at 100% 100%, var(--rh-trust-muted) 0%, transparent 55%);
     }
 
     .wrap {
@@ -58,41 +69,42 @@
     header {
       text-align: center;
       margin-bottom: 2.5rem;
-      animation: fadeUp 0.6s ease-out;
+      animation: fadeUp 0.6s var(--rh-ease) forwards;
     }
 
     h1 {
-      font-family: 'Instrument Serif', Georgia, serif;
+      font-family: var(--rh-font-display);
       font-size: clamp(1.75rem, 5vw, 2.25rem);
-      font-weight: 400;
-      color: var(--ink);
+      font-weight: 700;
+      color: var(--rh-neutral-900);
       margin: 0 0 0.5rem;
       line-height: 1.2;
     }
 
     .sub {
       font-size: 0.9375rem;
-      color: var(--ink-muted);
+      color: var(--rh-neutral-700);
       margin: 0;
     }
 
     .rule {
       font-size: 0.8125rem;
-      color: var(--teal);
+      color: var(--rh-primary-dark);
       margin-top: 0.75rem;
       padding: 0.5rem 0.75rem;
-      background: rgba(13, 92, 99, 0.08);
-      border-radius: 8px;
+      background: var(--rh-primary-muted);
+      border-radius: var(--rh-radius-sm);
       display: inline-block;
     }
 
     .card {
-      background: var(--surface);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
+      background: var(--rh-white);
+      border-radius: var(--rh-radius-lg);
+      box-shadow: 0 4px 24px rgba(15, 23, 42, 0.08);
+      border: 1px solid var(--rh-neutral-300);
       padding: 1.5rem 1.75rem;
       margin-bottom: 1.25rem;
-      animation: fadeUp 0.5s ease-out backwards;
+      animation: fadeUp 0.5s var(--rh-ease) backwards;
     }
 
     .card:nth-child(1) { animation-delay: 0.05s; }
@@ -113,10 +125,10 @@
     }
 
     .card-title {
-      font-family: 'Instrument Serif', Georgia, serif;
+      font-family: var(--rh-font-display);
       font-size: 1.125rem;
-      font-weight: 400;
-      color: var(--ink);
+      font-weight: 700;
+      color: var(--rh-neutral-900);
       margin: 0 0 1rem;
     }
 
@@ -124,26 +136,28 @@
       display: block;
       font-size: 0.875rem;
       font-weight: 500;
-      color: var(--ink);
+      color: var(--rh-neutral-900);
       margin-bottom: 0.35rem;
     }
 
-    input[type="number"] {
+    input[type="number"],
+    input[type="text"] {
       width: 100%;
       padding: 0.65rem 0.75rem;
       font: inherit;
       font-size: 1rem;
-      border: 1px solid #dde0e4;
-      border-radius: 8px;
-      color: var(--ink);
-      background: var(--surface);
-      transition: border-color 0.2s, box-shadow 0.2s;
+      border: 1px solid var(--rh-neutral-300);
+      border-radius: var(--rh-radius-md);
+      color: var(--rh-neutral-900);
+      background: var(--rh-white);
+      transition: border-color var(--rh-duration) var(--rh-ease), box-shadow var(--rh-duration) var(--rh-ease);
     }
 
-    input[type="number"]:focus {
+    input[type="number"]:focus,
+    input[type="text"]:focus {
       outline: none;
-      border-color: var(--teal);
-      box-shadow: 0 0 0 3px rgba(13, 92, 99, 0.15);
+      border-color: var(--rh-primary);
+      box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.2);
     }
 
     .row {
@@ -173,13 +187,14 @@
     }
 
     .btn {
-      font: inherit;
-      font-weight: 500;
+      font-family: var(--rh-font-body);
+      font-weight: 600;
       cursor: pointer;
       border: none;
-      border-radius: 8px;
+      border-radius: var(--rh-radius-md);
       padding: 0.6rem 1rem;
-      transition: background 0.2s, transform 0.1s;
+      font-size: 0.9375rem;
+      transition: background var(--rh-duration) var(--rh-ease), transform var(--rh-duration) var(--rh-ease), box-shadow var(--rh-duration) var(--rh-ease);
     }
 
     .btn:active {
@@ -187,46 +202,49 @@
     }
 
     .btn-secondary {
-      background: rgba(13, 92, 99, 0.12);
-      color: var(--teal);
+      background: var(--rh-primary-muted);
+      color: var(--rh-primary-dark);
+      border: 1px solid rgba(15, 118, 110, 0.25);
     }
 
     .btn-secondary:hover {
-      background: rgba(13, 92, 99, 0.2);
+      background: rgba(13, 148, 136, 0.15);
+      box-shadow: 0 2px 8px rgba(13, 148, 136, 0.2);
     }
 
     .btn-remove {
-      background: rgba(26, 29, 33, 0.08);
-      color: var(--ink-muted);
+      background: var(--rh-neutral-100);
+      color: var(--rh-neutral-700);
       padding: 0.5rem 0.75rem;
       font-size: 0.875rem;
     }
 
     .btn-remove:hover {
-      background: rgba(26, 29, 33, 0.14);
-      color: var(--ink);
+      background: var(--rh-neutral-300);
+      color: var(--rh-neutral-900);
     }
 
     .btn-primary {
       width: 100%;
       padding: 0.9rem 1.5rem;
       font-size: 1rem;
-      background: var(--accent);
-      color: #fff;
+      background: var(--rh-primary);
+      color: var(--rh-white);
       margin-top: 0.5rem;
     }
 
     .btn-primary:hover {
-      background: #a84d1f;
-      box-shadow: 0 4px 16px rgba(196, 92, 38, 0.35);
+      background: var(--rh-primary-dark);
+      box-shadow: 0 6px 20px rgba(13, 148, 136, 0.35);
+      transform: translateY(-1px);
     }
 
     .result {
       margin-top: 2rem;
       padding: 1.75rem 1.75rem;
-      border-radius: var(--radius);
+      border-radius: var(--rh-radius-lg);
       text-align: center;
-      animation: fadeUp 0.4s ease-out;
+      animation: fadeUp 0.4s var(--rh-ease) forwards;
     }
 
     .result.hidden {
@@ -234,33 +252,34 @@
     }
 
     .result.over {
-      background: rgba(181, 101, 29, 0.12);
-      border: 1px solid rgba(181, 101, 29, 0.3);
+      background: rgba(244, 63, 94, 0.08);
+      border: 1px solid rgba(244, 63, 94, 0.25);
     }
 
     .result.ok {
-      background: rgba(45, 106, 79, 0.1);
-      border: 1px solid rgba(45, 106, 79, 0.25);
+      background: var(--rh-primary-muted);
+      border: 1px solid rgba(13, 148, 136, 0.3);
     }
 
     .result.under {
-      background: rgba(13, 92, 99, 0.1);
-      border: 1px solid rgba(13, 92, 99, 0.25);
+      background: var(--rh-trust-muted);
+      border: 1px solid rgba(14, 165, 233, 0.3);
     }
 
     .result-verdict {
-      font-family: 'Instrument Serif', Georgia, serif;
+      font-family: var(--rh-font-display);
       font-size: 1.5rem;
+      font-weight: 700;
       margin: 0 0 0.5rem;
     }
 
-    .result.over .result-verdict { color: var(--warning); }
-    .result.ok .result-verdict { color: var(--success); }
-    .result.under .result-verdict { color: var(--teal); }
+    .result.over .result-verdict { color: var(--rh-secondary-dark); }
+    .result.ok .result-verdict { color: var(--rh-primary-dark); }
+    .result.under .result-verdict { color: var(--rh-trust); }
 
     .result-detail {
       font-size: 0.9375rem;
-      color: var(--ink-muted);
+      color: var(--rh-neutral-700);
       margin: 0 0 1rem;
     }
 
@@ -272,21 +291,17 @@
       margin-top: 1rem;
     }
 
-    .result-num {
-      text-align: center;
-    }
-
     .result-num span {
       display: block;
       font-size: 1.75rem;
       font-weight: 700;
-      color: var(--ink);
+      color: var(--rh-neutral-900);
     }
 
     .result-num label {
       font-size: 0.75rem;
       font-weight: 500;
-      color: var(--ink-muted);
+      color: var(--rh-neutral-500);
       text-transform: uppercase;
       letter-spacing: 0.04em;
       margin: 0;
@@ -295,7 +310,7 @@
     .result-cta {
       margin-top: 1.5rem;
       padding-top: 1.25rem;
-      border-top: 1px solid rgba(26, 29, 33, 0.08);
+      border-top: 1px solid var(--rh-neutral-300);
     }
 
     .result-cta a {
@@ -303,16 +318,18 @@
       padding: 0.65rem 1.25rem;
       font-size: 0.9375rem;
       font-weight: 600;
-      color: #fff;
-      background: var(--teal);
-      border-radius: 8px;
+      font-family: var(--rh-font-body);
+      color: var(--rh-white);
+      background: var(--rh-primary);
+      border-radius: var(--rh-radius-md);
       text-decoration: none;
-      transition: background 0.2s, box-shadow 0.2s;
+      transition: background var(--rh-duration) var(--rh-ease), box-shadow var(--rh-duration) var(--rh-ease), transform var(--rh-duration) var(--rh-ease);
     }
 
     .result-cta a:hover {
-      background: #0a4a50;
-      box-shadow: 0 4px 12px rgba(13, 92, 99, 0.3);
+      background: var(--rh-primary-dark);
+      box-shadow: 0 6px 20px rgba(13, 148, 136, 0.35);
+      transform: translateY(-1px);
     }
 
     .insurance-breakdown.hidden {
@@ -322,20 +339,20 @@
     .insurance-breakdown {
       margin-top: 2rem;
       padding-top: 1.75rem;
-      border-top: 1px solid rgba(26, 29, 33, 0.08);
+      border-top: 1px solid var(--rh-neutral-300);
     }
 
     .insurance-breakdown h3 {
-      font-family: 'Instrument Serif', Georgia, serif;
+      font-family: var(--rh-font-display);
       font-size: 1.25rem;
-      font-weight: 400;
-      color: var(--ink);
+      font-weight: 700;
+      color: var(--rh-neutral-900);
       margin: 0 0 0.5rem;
     }
 
     .insurance-breakdown .intro {
       font-size: 0.9375rem;
-      color: var(--ink-muted);
+      color: var(--rh-neutral-700);
       margin: 0 0 1.25rem;
     }
 
@@ -348,33 +365,17 @@
       margin-bottom: 0.35rem;
     }
 
-    .insurance-search-wrap input {
-      width: 100%;
-      padding: 0.6rem 0.75rem;
-      font: inherit;
-      font-size: 0.9375rem;
-      border: 1px solid #dde0e4;
-      border-radius: 8px;
-      color: var(--ink);
-      background: var(--surface);
-    }
-
     .insurance-search-wrap input::placeholder {
-      color: var(--ink-muted);
-    }
-
-    .insurance-search-wrap input:focus {
-      outline: none;
-      border-color: var(--teal);
-      box-shadow: 0 0 0 3px rgba(13, 92, 99, 0.12);
+      color: var(--rh-neutral-500);
     }
 
     .insurance-type-card {
-      background: var(--surface);
-      border: 1px solid rgba(26, 29, 33, 0.1);
-      border-radius: var(--radius);
+      background: var(--rh-white);
+      border: 1px solid var(--rh-neutral-300);
+      border-radius: var(--rh-radius-lg);
       padding: 1.25rem 1.25rem;
       margin-bottom: 1rem;
+      box-shadow: 0 2px 12px rgba(15, 23, 42, 0.05);
     }
 
     .insurance-type-card.hidden {
@@ -382,28 +383,29 @@
     }
 
     .insurance-type-card h4 {
+      font-family: var(--rh-font-display);
       font-size: 1rem;
-      font-weight: 600;
-      color: var(--teal);
+      font-weight: 700;
+      color: var(--rh-primary-dark);
       margin: 0 0 0.5rem;
     }
 
     .insurance-type-card .carriers {
       font-size: 0.8125rem;
-      color: var(--ink-muted);
+      color: var(--rh-neutral-700);
       margin-bottom: 0.75rem;
       line-height: 1.5;
     }
 
     .insurance-type-card .carriers strong {
-      color: var(--ink);
+      color: var(--rh-neutral-900);
     }
 
     .insurance-type-card ul {
       margin: 0;
       padding-left: 1.25rem;
       font-size: 0.875rem;
-      color: var(--ink);
+      color: var(--rh-neutral-700);
       line-height: 1.55;
     }
 
@@ -417,7 +419,7 @@
 
     .insurance-no-results {
       font-size: 0.9375rem;
-      color: var(--ink-muted);
+      color: var(--rh-neutral-700);
       padding: 1rem 0;
       display: none;
     }
@@ -433,6 +435,7 @@
     <header>
       <h1>Am I Paying Too Much?</h1>
       <p class="sub">Compare your monthly premium to a common benchmark.</p>
+      <p class="rule" aria-hidden="true">Richards Health</p>
     </header>
 
     <form id="form" class="card">
@@ -736,7 +739,7 @@
           </div>
         </div>
         ${hideCta ? '' : `<div class="result-cta">
-          <a href="https://meet.richards.health" target="_blank" rel="noopener">Learn more about your ideal options</a>
+          <a href="https://richards.health" target="_blank" rel="noopener">Learn more about your ideal options</a>
         </div>`}
       `;
 
