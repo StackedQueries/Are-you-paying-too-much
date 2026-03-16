@@ -24,6 +24,15 @@
 
     gtag('config', 'AW-18017934104');
   </script>
+  <!-- Google tag (gtag.js) - GA4 -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-254XYCPKN3"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-254XYCPKN3');
+  </script>
   <!-- Meta Pixel Code -->
   <script>
 !function(f,b,e,v,n,t,s)
@@ -95,7 +104,7 @@ fbq('track', 'PageView');
           <span class="flow-progress-fill" id="flow-progress-fill"></span>
         </div>
       </div>
-      <p class="flow-progress-count" id="flow-progress-count" aria-live="polite">Step 1 of 6</p>
+      <p class="flow-progress-count" id="flow-progress-count" aria-live="polite">Step 1 of 5</p>
       <p class="flow-start-over-wrap" id="flow-start-over-wrap" aria-hidden="true">
         <button type="button" class="btn-link flow-start-over" id="flow-start-over">Start over</button>
       </p>
@@ -181,7 +190,6 @@ fbq('track', 'PageView');
             <button type="button" class="btn btn-primary flow-next" data-next-step="5">Continue</button>
           </div>
         </div>
-
         <div class="flow-step-panel hidden" data-step="5" data-step-name="contact">
           <h2 class="card-title">Where should we send your benchmark?</h2>
           <p class="sub flow-step-sub">We'll show your result here and may follow up with next steps.</p>
@@ -193,30 +201,20 @@ fbq('track', 'PageView');
             <label for="phone">Phone <span class="required" aria-hidden="true">*</span></label>
             <input type="tel" id="phone" name="phone" placeholder="e.g. (555) 123-4567">
           </div>
-          <p class="flow-error" id="step5-error"></p>
-          <div class="flow-actions">
-            <button type="button" class="btn btn-outline flow-back" data-back-step="4">Back</button>
-            <button type="button" class="btn btn-primary flow-next" data-next-step="6">Continue</button>
-          </div>
-        </div>
-
-        <div class="flow-step-panel hidden" data-step="6" data-step-name="consent">
-          <h2 class="card-title">Consent and continue</h2>
-          <p class="sub flow-step-sub">Review and consent so we can show your benchmark result.</p>
           <div class="consent-check">
             <input type="checkbox" id="consent-checkbox" name="consent_check">
             <label for="consent-checkbox">I agree to be contacted by Richards Health about coverage options related to this benchmark. <span class="required" aria-hidden="true">*</span></label>
           </div>
           <p class="flow-fineprint">After submission, a licensed advisor may follow up with tailored next steps.</p>
-          <p class="flow-error" id="step6-error"></p>
+          <p class="flow-error" id="step5-error"></p>
           <div class="flow-actions">
-            <button type="button" class="btn btn-outline flow-back" data-back-step="5">Back</button>
+            <button type="button" class="btn btn-outline flow-back" data-back-step="4">Back</button>
             <button type="submit" id="flow-submit" class="btn btn-primary">See My Benchmark</button>
           </div>
         </div>
-      
+
       </form>
-      <p class="flow-progress-count" id="flow-progress-count" aria-live="polite">Step 1 of 6</p>
+      <p class="flow-progress-count" id="flow-progress-count" aria-live="polite">Step 1 of 5</p>
       <p class="flow-start-over-wrap" id="flow-start-over-wrap" aria-hidden="true">
         <button type="button" class="btn-link flow-start-over" id="flow-start-over">Start over</button>
       </p>
@@ -277,6 +275,7 @@ fbq('track', 'PageView');
   </script>
   <script src="../js/analytics.js"></script>
   <script type="text/javascript" src="https://assets.calendly.com/assets/external/widget.js" async></script>
+  <script src="../js/benchmark-report.js"></script>
   <script src="../js/flow.js"></script>
 </body>
 </html>

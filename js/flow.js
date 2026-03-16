@@ -13,6 +13,8 @@
   var resultMetaEl = document.getElementById("result-meta");
   var flowStartOverWrap = document.getElementById("flow-start-over-wrap");
   var flowStartOverBtn = document.getElementById("flow-start-over");
+  var progressLabelEl = document.querySelector(".flow-progress-label");
+  var momentumMessageEl = document.getElementById("flow-momentum-message");
 
   var state = {
     visibleSteps: [],
@@ -29,6 +31,22 @@
   var FLOW_STORAGE_TTL_MS = 30 * 60 * 1000;
   var MAX_CHILDREN = 20;
 
+  var STEP_LABELS = {
+    1: "Situation",
+    2: "Household",
+    3: "Health",
+    4: "Coverage",
+    5: "Benchmark"
+  };
+
+  var STEP_TIME_LABELS = [
+    "About 60 seconds remaining",
+    "About 45 seconds remaining",
+    "About 30 seconds remaining",
+    "About 15 seconds remaining",
+    "Under 10 seconds remaining"
+  ];
+
   function parseNum(val) {
     var n = Number(val);
     return Number.isFinite(n) ? n : NaN;
@@ -38,12 +56,38 @@
     return String(val || "").replace(/\D+/g, "");
   }
 
+  function ensureChartJs(callback) {
+    if (window.Chart && typeof callback === "function") {
+      callback();
+      return;
+    }
+    if (!document || !document.createElement) {
+      if (typeof callback === "function") callback();
+      return;
+    }
+    var existing = document.querySelector('script[data-rh-chartjs="1"]');
+    if (existing) {
+      existing.addEventListener("load", function () {
+        if (typeof callback === "function") callback();
+      }, { once: true });
+      return;
+    }
+    var script = document.createElement("script");
+    script.src = "https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js";
+    script.async = true;
+    script.setAttribute("data-rh-chartjs", "1");
+    script.onload = function () {
+      if (typeof callback === "function") callback();
+    };
+    document.head.appendChild(script);
+  }
+
   function resolveVisibleSteps() {
     var known = !!pageContext.situation_preselect;
     state.contextStepSkipped = known;
     state.selectedSituation = known ? pageContext.situation_preselect : null;
     state.situationSource = known ? "route_preselect" : "user_select";
-    state.visibleSteps = known ? [2, 3, 4, 5, 6] : [1, 2, 3, 4, 5, 6];
+    state.visibleSteps = known ? [2, 3, 4, 5] : [1, 2, 3, 4, 5];
   }
 
   function updateProgress(stepNum) {
@@ -59,8 +103,13 @@
       progressFill.setAttribute("aria-valuemax", String(total));
       progressFill.setAttribute("role", "progressbar");
     }
+    var stepLabel = STEP_LABELS[stepNum] || "Step";
+    if (progressLabelEl) {
+      progressLabelEl.textContent = "Step " + current + " — " + stepLabel;
+    }
     if (progressCount) {
-      progressCount.textContent = "Step " + current + " of " + total;
+      var remainingText = STEP_TIME_LABELS[idx] || "Under 30 seconds remaining";
+      progressCount.textContent = remainingText;
     }
   }
 
@@ -113,12 +162,16 @@
       runStepTransition(fromStep, stepNum, function () {
         state.currentStep = stepNum;
         updateProgress(stepNum);
+        updateSupportingSectionsForStep(stepNum);
         if (window.rhTrack) window.rhTrack("step_view", { step_number: stepNum, page_id: pageContext.page_id || "" });
         var panel = form.querySelector('.flow-step-panel[data-step="' + stepNum + '"]');
         var first = panel && panel.querySelector("button, input, select, [tabindex='0']");
         if (first) requestAnimationFrame(function () { first.focus(); });
         if (flowStartOverWrap) flowStartOverWrap.setAttribute("aria-hidden", stepNum >= 2 ? "false" : "true");
         saveFlowState();
+        if (flowShell && typeof flowShell.scrollIntoView === "function") {
+          flowShell.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
       });
       return;
     }
@@ -128,12 +181,16 @@
     });
     state.currentStep = stepNum;
     updateProgress(stepNum);
+    updateSupportingSectionsForStep(stepNum);
     if (window.rhTrack) window.rhTrack("step_view", { step_number: stepNum, page_id: pageContext.page_id || "" });
     var panel = form.querySelector('.flow-step-panel[data-step="' + stepNum + '"]');
     var first = panel && panel.querySelector("button, input, select, [tabindex='0']");
     if (first) requestAnimationFrame(function () { first.focus(); });
     if (flowStartOverWrap) flowStartOverWrap.setAttribute("aria-hidden", stepNum >= 2 ? "false" : "true");
     saveFlowState();
+    if (flowShell && typeof flowShell.scrollIntoView === "function") {
+      flowShell.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
   }
 
   function getNextStep(stepNum) {
@@ -176,15 +233,24 @@
     } catch (e) {}
   }
 
-  function saveCompletedResult(resultType, premium, benchmark, noCurrentPremium) {
+  function saveCompletedResult(report) {
     try {
+      var v = report.values;
       var payload = {
         page_id: pageContext.page_id || "home",
         completed: true,
-        resultType: resultType || "ballpark",
-        premium: premium,
-        benchmark: benchmark,
-        noCurrentPremium: noCurrentPremium ? "yes" : "no",
+        resultType: report.resultType || "ballpark",
+        premium: v.currentMonthlyPremium || 0,
+        benchmark: v.directionalBenchmark || 0,
+        noCurrentPremium: v.currentMonthlyPremium === null ? "yes" : "no",
+        householdSize: v.householdSize || 1,
+        reportInput: {
+          monthlyPremium: v.currentMonthlyPremium,
+          noCurrentPremium: v.currentMonthlyPremium === null,
+          householdSize: v.householdSize,
+          state: (pageContext.state || "").toUpperCase() || null,
+          formulaBenchmark: v.directionalBenchmark
+        },
         savedAt: Date.now()
       };
       sessionStorage.setItem(FLOW_STORAGE_KEY, JSON.stringify(payload));
@@ -253,6 +319,7 @@
       panel.classList.toggle("hidden", panelStep !== stepNum);
     });
     updateProgress(stepNum);
+    updateSupportingSectionsForStep(stepNum);
     if (flowStartOverWrap) flowStartOverWrap.setAttribute("aria-hidden", stepNum >= 2 ? "false" : "true");
     var panel = form.querySelector('.flow-step-panel[data-step="' + stepNum + '"]');
     var first = panel && panel.querySelector("button, input, select, [tabindex='0']");
@@ -325,6 +392,66 @@
     heading.className = "card-title";
     heading.textContent = headingText;
     introCard.insertBefore(heading, introCard.firstChild);
+  }
+
+  function updateSupportingSectionsForStep(stepNum) {
+    var isFirstVisibleStep = state.visibleSteps.length ? state.visibleSteps[0] === stepNum : stepNum === 1;
+    var show = isFirstVisibleStep;
+    [".trust-strip", ".pillar-card"].forEach(function (selector) {
+      document.querySelectorAll(selector).forEach(function (el) {
+        el.style.display = show ? "" : "none";
+      });
+    });
+  }
+
+  function ensureMomentumMessageElement() {
+    if (momentumMessageEl || !flowShell) return;
+    var existing = document.getElementById("flow-momentum-message");
+    if (existing) {
+      momentumMessageEl = existing;
+      return;
+    }
+    var progressEl = document.getElementById("flow-progress");
+    var msg = document.createElement("p");
+    msg.id = "flow-momentum-message";
+    msg.className = "flow-momentum-message";
+    msg.setAttribute("aria-live", "polite");
+    msg.textContent = "";
+    if (progressEl && progressEl.parentNode === flowShell) {
+      flowShell.insertBefore(msg, progressEl.nextSibling);
+    } else {
+      flowShell.insertBefore(msg, flowShell.firstChild || null);
+    }
+    momentumMessageEl = msg;
+  }
+
+  var MOMENTUM_MESSAGES = {
+    1: "Great \u2014 that helps refine your benchmark.",
+    2: "Perfect \u2014 your household details are set.",
+    3: "Thanks \u2014 this improves benchmark accuracy.",
+    4: "You\u2019re almost done \u2014 benchmark is ready."
+  };
+
+  function showMomentumMessage(stepNum) {
+    ensureMomentumMessageElement();
+    if (!momentumMessageEl) return;
+    var msg = MOMENTUM_MESSAGES[stepNum];
+    if (!msg) {
+      momentumMessageEl.textContent = "";
+      momentumMessageEl.classList.remove("flow-momentum-message--visible");
+      return;
+    }
+    momentumMessageEl.textContent = msg;
+    momentumMessageEl.classList.remove("flow-momentum-message--visible");
+    if (prefersReducedMotion()) {
+      momentumMessageEl.classList.add("flow-momentum-message--visible");
+      return;
+    }
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        momentumMessageEl.classList.add("flow-momentum-message--visible");
+      });
+    });
   }
 
   function personFieldsHtml(prefix, roleLabel, roleKey, nameOnly) {
@@ -443,6 +570,14 @@
     var req = '<span class="required" aria-hidden="true">*</span>';
     var primaryBlock =
       '<div class="household-block">' +
+      '<div class="household-presets" id="household-presets">' +
+      '<p class="household-presets-label">Quick setup</p>' +
+      '<div class="household-presets-buttons">' +
+      '<button type="button" class="btn btn-secondary household-preset" data-preset="just_me">Just me</button>' +
+      '<button type="button" class="btn btn-secondary household-preset" data-preset="me_spouse">Me + spouse</button>' +
+      '<button type="button" class="btn btn-secondary household-preset" data-preset="family">Family</button>' +
+      "</div>" +
+      "</div>" +
       '<div class="household-card-single person-card primary" data-role="primary" data-prefix="primary_">' +
       '<div class="person-card-header"><span class="person-role">Primary</span></div>' +
       '<div class="field">' +
@@ -459,6 +594,10 @@
       "</div>" +
       "</div>";
     container.innerHTML = primaryBlock;
+    updateAddSpouseButtonState();
+    updateAddChildButtonState();
+    var heading = container.querySelector(".household-dependents-heading");
+    if (heading) heading.style.display = "none";
   }
 
   function animateRowIn(row) {
@@ -481,6 +620,8 @@
     slot.appendChild(row);
     updateAddSpouseButtonState();
     animateRowIn(row);
+    var heading = document.querySelector(".household-dependents-heading");
+    if (heading) heading.style.display = "";
     saveFlowState();
   }
 
@@ -510,6 +651,8 @@
     row.classList.add("household-row--entering");
     slot.appendChild(row);
     updateAddChildButtonState();
+    var heading = document.querySelector(".household-dependents-heading");
+    if (heading) heading.style.display = "";
     saveFlowState();
     if (prefersReducedMotion()) row.classList.remove("household-row--entering");
     else {
@@ -519,6 +662,37 @@
         });
       });
     }
+  }
+
+  function clearDependents() {
+    var spouseSlot = document.getElementById("spouse-slot");
+    var childrenSlot = document.getElementById("children-slot");
+    if (spouseSlot) spouseSlot.innerHTML = "";
+    if (childrenSlot) childrenSlot.innerHTML = "";
+    state.spouseAdded = false;
+    state.childCount = 0;
+    updateAddSpouseButtonState();
+    updateAddChildButtonState();
+    var heading = document.querySelector(".household-dependents-heading");
+    if (heading) heading.style.display = "none";
+  }
+
+  function applyHouseholdPreset(preset) {
+    clearDependents();
+    var primaryName = document.getElementById("primary_name");
+    if (preset === "just_me") {
+      if (primaryName && !primaryName.value) primaryName.focus();
+      saveFlowState();
+      return;
+    }
+    if (preset === "me_spouse" || preset === "family") {
+      addSpouseRow();
+    }
+    if (preset === "family") {
+      addChildRow();
+      addChildRow();
+    }
+    saveFlowState();
   }
 
   function getPeopleFromStep2() {
@@ -551,6 +725,11 @@
       html += personDetailsFieldsHtml(p.prefix, heading);
     });
     container.innerHTML = html;
+    if (!people.some(function (p) { return p.roleLabel === "Spouse"; })) {
+      container.querySelectorAll('.person-details-section[data-prefix^="spouse_"]').forEach(function (el) {
+        el.parentNode && el.parentNode.removeChild(el);
+      });
+    }
   }
 
   function getPrimaryPayload() {
@@ -560,7 +739,9 @@
     };
     var fullName = g("full-name") || g("primary_name");
     var premiumRaw = g("premium");
-    var hasPremium = premiumRaw !== "";
+    var unknownBtn = document.getElementById("premium-unknown");
+    var isUnknown = !!(unknownBtn && unknownBtn.getAttribute("data-unknown") === "1");
+    var hasPremium = premiumRaw !== "" && !isUnknown;
     /* Name from step 2; birthday, gender, height, weight, health from step 3 (person details); contact/coverage from steps 4–5 */
     return {
       name: fullName,
@@ -633,14 +814,39 @@
       var stepDef = (window.FLOW_STEPS || []).find(function (s) { return s.id === "situation"; });
       return (stepDef && stepDef.options) || [];
     })();
+    if (!state.selectedSituation && !pageContext.situation_preselect) {
+      state.selectedSituation = "self_employed";
+      state.situationSource = "default";
+    }
     var html = options.map(function (opt) {
-      return (
-        '<button type="button" class="btn btn-outline situation-option" data-situation="' + opt.id + '">' +
-        opt.label +
-        "</button>"
-      );
+      var isSelected = opt.id === state.selectedSituation;
+      var classes = "btn situation-option " + (isSelected ? "btn-primary situation-option--selected" : "btn-outline");
+      return '<button type="button" class="' + classes + '" data-situation="' + opt.id + '">' + opt.label + "</button>";
     }).join("");
     wrap.innerHTML = html;
+    syncSituationSelectionUI();
+  }
+
+  function syncSituationSelectionUI() {
+    var wrap = document.getElementById("situation-options");
+    if (!wrap) return;
+    var selectedId = state.selectedSituation;
+    var buttons = wrap.querySelectorAll(".situation-option");
+    buttons.forEach(function (btn) {
+      var isSelected = btn.getAttribute("data-situation") === selectedId;
+      btn.classList.toggle("btn-primary", isSelected);
+      btn.classList.toggle("btn-outline", !isSelected);
+      btn.classList.toggle("situation-option--selected", isSelected);
+    });
+    var step1Panel = form.querySelector('.flow-step-panel[data-step="1"]');
+    if (step1Panel) {
+      var cta = step1Panel.querySelector(".flow-next");
+      if (cta) {
+        var enabled = !!selectedId;
+        cta.disabled = !enabled;
+        cta.classList.toggle("btn-disabled", !enabled);
+      }
+    }
   }
 
   function enhanceContactStep() {
@@ -732,9 +938,11 @@
       return false;
     }
     var premiumInput = document.getElementById("premium");
+    var unknownBtn = document.getElementById("premium-unknown");
     var premiumRaw = premiumInput ? String(premiumInput.value || "").trim() : "";
-    if (premiumRaw !== "" && (!Number.isFinite(parseNum(premiumRaw)) || parseNum(premiumRaw) < 0)) {
-      setError(4, "Enter a valid monthly premium or leave blank.");
+    var isUnknown = !!(unknownBtn && unknownBtn.getAttribute("data-unknown") === "1");
+    if (!isUnknown && premiumRaw !== "" && (!Number.isFinite(parseNum(premiumRaw)) || parseNum(premiumRaw) < 0)) {
+      setError(4, "Enter a valid monthly premium, or leave blank / choose \"I don't know my premium\".");
       return false;
     }
     setError(4, "");
@@ -744,6 +952,7 @@
   function validateContact() {
     var email = (document.getElementById("email") && document.getElementById("email").value) || "";
     var phone = digitsOnly((document.getElementById("phone") && document.getElementById("phone").value) || "");
+    var consent = document.getElementById("consent-checkbox");
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setError(5, "Please enter a valid email.");
       return false;
@@ -752,17 +961,11 @@
       setError(5, "Please enter a valid phone number.");
       return false;
     }
-    setError(5, "");
-    return true;
-  }
-
-  function validateConsent() {
-    var consent = document.getElementById("consent-checkbox");
     if (!consent || !consent.checked) {
-      setError(6, "Please provide consent to continue.");
+      setError(5, "Please provide consent to continue.");
       return false;
     }
-    setError(6, "");
+    setError(5, "");
     return true;
   }
 
@@ -772,7 +975,6 @@
     if (stepNum === 3) return validatePersonDetails();
     if (stepNum === 4) return validateLocationCoverage();
     if (stepNum === 5) return validateContact();
-    if (stepNum === 6) return validateConsent();
     return true;
   }
 
@@ -787,35 +989,506 @@
     return "ballpark";
   }
 
-  function renderResult(resultType, premium, benchmark, noCurrentPremium) {
-    var copy = (window.RESULT_COPY || {})[resultType] || {};
-    var benchmarkNote = (window.RESULT_COPY || {}).benchmark_note || "This is a directional benchmark based on your inputs.";
-    var followUp = (window.RESULT_COPY || {}).follow_up || "";
+  function classifyPlanType(coverageStatus, currentPlanType) {
+    if (currentPlanType === "aca_marketplace") return "ACA_MARKETPLACE";
+    if (currentPlanType === "short_term") return "SHORT_TERM";
+    if (currentPlanType === "health_share") return "HEALTH_SHARE";
+    if (currentPlanType === "group_employer" || coverageStatus === "employer_plan") {
+      return "EMPLOYER_GROUP";
+    }
+    // Additional detection hooks for future refinement
+    if (currentPlanType === "limited_benefit") return "LIMITED_BENEFIT";
+    if (currentPlanType === "private_ppo") return "PRIVATE_PPO";
+    if (currentPlanType === "hdhp_hsa") return "HDHP_HSA";
+    if (coverageStatus === "cobra") return "COBRA";
+    return "UNKNOWN";
+  }
+
+  function getPlanProfile(planType) {
+    var profiles = window.PLAN_PROFILES || {};
+    return profiles[planType] || profiles.UNKNOWN || {
+      id: "UNKNOWN",
+      label: "Current plan (unspecified)",
+      suitability_notes: [],
+      blind_spots: []
+    };
+  }
+
+  function chartFallbackCard(container, message) {
+    var card = document.createElement("div");
+    card.className = "metric-card";
+    card.style.textAlign = "center";
+    card.style.padding = "1.5rem";
+    card.innerHTML =
+      "<p class=\"metric-label\">Chart unavailable</p>" +
+      "<p class=\"metric-value\" style=\"font-size:0.95rem;font-weight:400\">" + message + "</p>";
+    container.parentNode.replaceChild(card, container);
+  }
+
+  function initResultEnhancements(report) {
+    if (!window.Chart) return;
+    var v = report.values;
+    var fmt = window.formatBenchmarkCurrency || function (n) { return "$" + Math.round(n); };
+
+    // Chart A — coverage layers stacked exposure structure
+    var coverageStructureCanvas = document.getElementById("coverage-structure-chart");
+    if (coverageStructureCanvas) {
+      if (!report.hasEnoughDataForExposureChart) {
+        chartFallbackCard(coverageStructureCanvas,
+          "We need more plan detail to estimate this chart precisely, but your current structure may still create meaningful exposure.");
+      } else {
+        var ctxCoverage = coverageStructureCanvas.getContext("2d");
+        new window.Chart(ctxCoverage, {
+          type: "bar",
+          data: {
+            labels: ["Annual premium", "Deductible", "Coinsurance exposure", "Max out-of-pocket"],
+            datasets: [
+              {
+                label: "Amount",
+                data: [v.annualPremium, v.deductible, v.coinsuranceExposure || 0, v.maxOutOfPocket],
+                backgroundColor: [
+                  "rgba(13, 148, 136, 0.85)",
+                  "rgba(45, 212, 191, 0.9)",
+                  "rgba(56, 189, 248, 0.9)",
+                  "rgba(15, 23, 42, 0.75)"
+                ]
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: function (context) {
+                    return fmt(context.parsed.y);
+                  }
+                }
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  callback: function (value) { return "$" + Math.round(value).toLocaleString(); }
+                }
+              }
+            }
+          }
+        });
+      }
+    }
+
+    // Chart B — example major medical event cost breakdown (You pay vs Insurance pays)
+    var eventCostCanvas = document.getElementById("event-cost-chart");
+    if (eventCostCanvas) {
+      if (!report.hasEnoughDataForMedicalEventChart) {
+        chartFallbackCard(eventCostCanvas,
+          "We need more plan detail to estimate this chart precisely, but your current structure may still create meaningful exposure.");
+      } else {
+        var ctxEvent = eventCostCanvas.getContext("2d");
+        new window.Chart(ctxEvent, {
+          type: "bar",
+          data: {
+            labels: ["You pay", "Insurance pays"],
+            datasets: [
+              {
+                label: "Deductible",
+                data: [v.exampleUserDeductible, 0],
+                backgroundColor: "rgba(248, 113, 113, 0.9)"
+              },
+              {
+                label: "Coinsurance",
+                data: [v.exampleUserCoinsurance, 0],
+                backgroundColor: "rgba(251, 146, 60, 0.9)"
+              },
+              {
+                label: "Insurance coverage",
+                data: [0, v.exampleInsurancePays],
+                backgroundColor: "rgba(34, 197, 94, 0.9)"
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: true },
+              tooltip: {
+                callbacks: {
+                  label: function (context) {
+                    return fmt(context.parsed.y);
+                  }
+                }
+              }
+            },
+            scales: {
+              x: { stacked: true },
+              y: {
+                stacked: true,
+                ticks: {
+                  callback: function (value) { return "$" + Math.round(value).toLocaleString(); }
+                }
+              }
+            }
+          }
+        });
+      }
+    }
+
+    // Chart C — Premium vs Risk Efficiency (stacked bar comparison)
+    var riskChartCanvas = document.getElementById("risk-efficiency-chart");
+    if (riskChartCanvas) {
+      if (!report.hasEnoughDataForRiskChart) {
+        chartFallbackCard(riskChartCanvas,
+          "Enter your current premium for a personalized premium vs risk efficiency comparison. Benchmark data is shown where available.");
+      } else {
+        var ctxRisk = riskChartCanvas.getContext("2d");
+        new window.Chart(ctxRisk, {
+          type: "bar",
+          data: {
+            labels: ["Your plan", "Typical plan"],
+            datasets: [
+              {
+                label: "Annual premium",
+                data: [v.annualPremium, v.benchmarkAnnualPremium],
+                backgroundColor: ["rgba(13, 148, 136, 0.85)", "rgba(13, 148, 136, 0.45)"]
+              },
+              {
+                label: "Expected exposure",
+                data: [v.yourExpectedOopRisk, v.benchmarkExpectedOopRisk],
+                backgroundColor: ["rgba(15, 23, 42, 0.7)", "rgba(15, 23, 42, 0.35)"]
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: true },
+              tooltip: {
+                callbacks: {
+                  label: function (context) {
+                    return context.dataset.label + ": " + fmt(context.parsed.y);
+                  }
+                }
+              }
+            },
+            scales: {
+              x: { stacked: true },
+              y: {
+                stacked: true,
+                beginAtZero: true,
+                ticks: {
+                  callback: function (value) { return "$" + Math.round(value).toLocaleString(); }
+                }
+              }
+            }
+          }
+        });
+      }
+    }
+
+    var riskMeter = document.querySelector(".result-risk-meter");
+    if (riskMeter) {
+      var rt = report.resultType || "ballpark";
+      var level = "moderate";
+      if (rt === "over") level = "high";
+      if (rt === "under") level = "moderate";
+      riskMeter.setAttribute("data-risk-level", level);
+    }
+  }
+
+  function renderResult(report) {
+    var v = report.values;
+    var resultType = report.resultType || "ballpark";
+    var noCurrentPremium = v.currentMonthlyPremium === null;
+    var fmt = window.formatBenchmarkCurrency || function (n) { return "$" + Math.round(n); };
+    var benchmarkNote = ((window.RESULT_COPY || {}).benchmark_note) || "This is a directional benchmark based on your inputs.";
     var ctaUrl = window.CTA_URL || "https://richards.health";
     var ctaPrimary = window.CTA_PRIMARY || "Continue to Coverage Review";
     var ctaSub = window.CTA_SUB || "";
-    var premiumLine = noCurrentPremium
-      ? "<p><strong>Current premium:</strong> Not currently paying a monthly premium</p>"
-      : "<p><strong>Your premium:</strong> $" + Math.round(premium || 0) + " / mo</p>";
-    var noPremiumNote = noCurrentPremium
-      ? "<p>You can still use this directional benchmark to evaluate likely plan cost ranges for your household.</p>"
+    var roundedPremium = v.currentMonthlyPremium !== null ? Math.round(v.currentMonthlyPremium) : 0;
+    var roundedBenchmark = v.directionalBenchmark !== null ? Math.round(v.directionalBenchmark) : 0;
+    var premiumRatio = (roundedBenchmark > 0 && !noCurrentPremium && roundedPremium > 0)
+      ? roundedPremium / roundedBenchmark : null;
+
+    var headline;
+    var headlineSupportingText;
+    var keyTakeawayText;
+
+    var stateRangeLine = "";
+    if (noCurrentPremium && roundedBenchmark > 0) {
+      var rangeLow = Math.round(roundedBenchmark * 0.8);
+      var rangeHigh = Math.round(roundedBenchmark * 1.2);
+      stateRangeLine = '<p class="result-summary-microcopy">Estimated premium range for similar households in your area: <strong>' + fmt(rangeLow) + '\u2013' + fmt(rangeHigh) + '/mo</strong>. Estimates based on benchmark data.</p>';
+    }
+
+    if (noCurrentPremium || roundedPremium === 0 || premiumRatio === null) {
+      headline = "Here is what typical coverage looks like for similar households in your area.";
+      headlineSupportingText = "Without a current premium, we can still show directional benchmark ranges and plan structure estimates.";
+      keyTakeawayText = "Your monthly premium is only one part of the cost of coverage. Your deductible, coinsurance, and maximum out-of-pocket limit often determine what you may actually pay if a major medical event occurs.";
+    } else if (premiumRatio < 0.70) {
+      headline = "Your premium is significantly below the typical benchmark for similar households.";
+      headlineSupportingText = "Lower premiums can sometimes indicate higher deductibles or increased out-of-pocket exposure.";
+      keyTakeawayText = "Lower premiums can sometimes come with higher deductibles or out-of-pocket exposure. Understanding your deductible and maximum out-of-pocket limits is important when evaluating coverage.";
+    } else if (premiumRatio > 1.30) {
+      headline = "Your premium appears higher than typical plans for similar households in your area.";
+      headlineSupportingText = "Higher premiums may reflect richer coverage, broader networks, or plan structure differences.";
+      keyTakeawayText = "Your premium is significantly higher than typical plans for similar households. However, premium alone does not determine protection. Deductibles, coinsurance, and maximum out-of-pocket limits determine your real financial exposure.";
+    } else {
+      headline = "Your premium is near the typical benchmark for similar households.";
+      headlineSupportingText = "Premium is only one part of the cost of coverage. Deductibles, coinsurance, and maximum out-of-pocket limits often determine your real financial exposure.";
+      keyTakeawayText = "Your premium appears close to typical benchmark ranges. However, plan structure still determines how much you may pay during major medical events.";
+    }
+
+    var premiumDifferenceLine = "";
+    if (!noCurrentPremium && roundedPremium > 0 && roundedBenchmark > 0) {
+      var diff = roundedPremium - roundedBenchmark;
+      if (diff > 0) {
+        premiumDifferenceLine = '<p class="result-summary-microcopy"><strong>Your premium is approximately ' + fmt(diff) + '/month higher than the benchmark.</strong></p>';
+      } else if (diff < 0) {
+        premiumDifferenceLine = '<p class="result-summary-microcopy"><strong>Your premium is approximately ' + fmt(Math.abs(diff)) + '/month lower than the benchmark.</strong></p>';
+      }
+    }
+
+    var premiumVsBenchmarkLine = noCurrentPremium
+      ? "You are not currently paying a monthly premium; this benchmark shows typical directional ranges for similar households."
+      : "Your current premium is " + fmt(roundedPremium) + "/mo versus a directional benchmark of " + fmt(roundedBenchmark) + "/mo.";
+
+    // Risk efficiency variables
+    var riskInterpretation = "";
+    if (noCurrentPremium || v.riskMultiplier === null) {
+      riskInterpretation = "Enter your current premium for a personalized risk efficiency comparison.";
+    } else if (v.riskMultiplier > 1.5) {
+      riskInterpretation = "Your estimated annual cost exposure is materially above benchmark for similar households.";
+    } else if (v.riskMultiplier > 1.1 && premiumRatio !== null && premiumRatio > 1.1) {
+      riskInterpretation = "Your higher premium may be reducing some out-of-pocket risk, but total annual cost still appears above benchmark.";
+    } else if (premiumRatio !== null && premiumRatio < 0.9 && v.yourExpectedOopRisk !== null && v.benchmarkExpectedOopRisk !== null && v.yourExpectedOopRisk > v.benchmarkExpectedOopRisk * 1.2) {
+      riskInterpretation = "Your lower premium may come with meaningfully higher financial risk during a major medical year.";
+    } else {
+      riskInterpretation = "Your total annual cost exposure appears broadly in line with benchmark expectations.";
+    }
+
+    var riskMultiplierText = "";
+    if (v.riskMultiplier !== null && !noCurrentPremium) {
+      if (v.riskMultiplier > 1.05) {
+        riskMultiplierText = "Your financial risk exposure is approximately <strong>" + v.riskMultiplier.toFixed(1) + "\u00d7 higher</strong> than typical plans.";
+      } else if (v.riskMultiplier < 0.95) {
+        riskMultiplierText = "Your financial risk exposure is approximately <strong>" + (1 / v.riskMultiplier).toFixed(1) + "\u00d7 lower</strong> than typical plans.";
+      } else {
+        riskMultiplierText = "Your financial risk exposure is <strong>roughly in line</strong> with typical plans.";
+      }
+    }
+
+    var exposureBestText = v.exposureBestCase !== null ? fmt(v.exposureBestCase) + "/yr" : "\u2014";
+    var exposureTypicalText = v.exposureTypicalCase !== null ? fmt(v.exposureTypicalCase) + "/yr" : "\u2014";
+    var exposureWorstText = v.exposureWorstCase !== null ? fmt(v.exposureWorstCase) + "/yr" : "\u2014";
+
+    var exposureRangeText = (v.estimatedExposureLow !== null && v.estimatedExposureHigh !== null)
+      ? fmt(v.estimatedExposureLow) + "\u2013" + fmt(v.estimatedExposureHigh)
+      : "Estimate unavailable";
+
+    var deductibleDisplay = v.deductible !== null ? fmt(v.deductible) : "Estimate unavailable";
+    var coinsuranceDisplay = v.coinsuranceExposure !== null ? fmt(v.coinsuranceExposure) : "Estimate unavailable";
+    var maxOopDisplay = v.maxOutOfPocket !== null ? fmt(v.maxOutOfPocket) : "Estimate unavailable";
+    var eventCostDisplay = v.exampleMedicalEventCost !== null ? fmt(v.exampleMedicalEventCost) : "$40,000";
+
+    var deductibleExample = (v.deductible !== null && v.coinsuranceExposure !== null)
+      ? "Example: " + deductibleDisplay + " deductible + " + coinsuranceDisplay + " coinsurance = " + fmt(v.deductible + v.coinsuranceExposure) + " potential exposure before full coverage begins."
+      : "Based on benchmark assumptions. A licensed advisor can help determine your exact cost structure.";
+
+    var assumptionsHtml = (report.assumptions && report.assumptions.length > 0)
+      ? '<p class="result-note" style="font-style:italic">This estimate uses common plan structure assumptions where plan details were not provided.</p>'
       : "";
 
     var cardHtml =
-      "<h3>" + (copy.verdict || "Your benchmark result is ready.") + "</h3>" +
-      "<p>" + (copy.detail || "") + "</p>" +
-      premiumLine +
-      "<p><strong>Directional benchmark:</strong> $" + Math.round(benchmark) + " / mo</p>" +
-      noPremiumNote +
-      "<p>" + benchmarkNote + "</p>" +
-      (followUp ? "<p>" + followUp + "</p>" : "") +
+      '<div class="result-summary-header">' +
+      '<p class="result-summary-eyebrow">Your Benchmark Result</p>' +
+      '<h3 class="result-summary-title">' + headline + "</h3>" +
+      '<p class="result-summary-microcopy">' + headlineSupportingText + "</p>" +
+      '<p class="result-summary-microcopy">' + premiumVsBenchmarkLine + "</p>" +
+      premiumDifferenceLine +
+      stateRangeLine +
+      '<p class="result-summary-microcopy">Your estimated financial exposure in a major medical year may reach ' + exposureRangeText + ".</p>" +
+      '<p class="result-summary-advisor">Many households review these trade-offs with a licensed advisor to better understand their real cost exposure.</p>' +
+      assumptionsHtml +
+      "</div>" +
+      '<div class="result-key-metrics">' +
+      '<div class="metric-card">' +
+      '<p class="metric-label">Current premium</p>' +
+      '<p class="metric-value">' + (noCurrentPremium ? "Not currently paying" : fmt(roundedPremium) + " / mo") + "</p>" +
+      "</div>" +
+      '<div class="metric-card">' +
+      '<p class="metric-label">Directional benchmark</p>' +
+      '<p class="metric-value">' + (roundedBenchmark > 0 ? fmt(roundedBenchmark) + " / mo" : "Unavailable") + "</p>" +
+      "</div>" +
+      '<div class="metric-card">' +
+      '<p class="metric-label">Household size</p>' +
+      '<p class="metric-value">' + (v.householdSize || 1) + "</p>" +
+      "</div>" +
+      "</div>" +
+      '<section class="result-section result-key-takeaway">' +
+      "<h4>Key takeaway</h4>" +
+      "<p>" + keyTakeawayText + "</p>" +
+      "</section>" +
+      '<section class="result-section result-risk">' +
+      "<h4>Major medical year exposure</h4>" +
+      '<p class="result-risk-range">' + exposureRangeText + " in potential out-of-pocket exposure during a major medical year.</p>" +
+      '<div class="exposure-scenarios">' +
+      '<div class="exposure-scenario"><span class="exposure-scenario-label">Best case</span><span class="exposure-scenario-desc">Premium only</span><span class="exposure-scenario-value">' + exposureBestText + '</span></div>' +
+      '<div class="exposure-scenario"><span class="exposure-scenario-label">Typical case</span><span class="exposure-scenario-desc">Premium + partial deductible</span><span class="exposure-scenario-value">' + exposureTypicalText + '</span></div>' +
+      '<div class="exposure-scenario exposure-scenario--worst"><span class="exposure-scenario-label">Worst case</span><span class="exposure-scenario-desc">Premium + max out-of-pocket</span><span class="exposure-scenario-value">' + exposureWorstText + '</span></div>' +
+      "</div>" +
+      '<div class="result-risk-meter" data-risk-level="moderate">' +
+      '<span class="risk-label">Low</span>' +
+      '<span class="risk-label">Moderate</span>' +
+      '<span class="risk-label">High</span>' +
+      '<span class="risk-label">Severe</span>' +
+      "</div>" +
+      '<p class="result-note">Exposure depends on deductible, coinsurance, and maximum out-of-pocket limits \u2014 not just monthly premium.</p>' +
+      "</section>" +
+      '<section class="result-section result-risk-efficiency">' +
+      "<h4>Premium vs risk efficiency</h4>" +
+      "<p>Compare how your annual premium and estimated financial exposure stack up against typical plans for similar households.</p>" +
+      '<div class="risk-comparison-table">' +
+      '<div class="risk-comparison-row risk-comparison-header"><span></span><span>Your plan</span><span>Typical plan</span></div>' +
+      '<div class="risk-comparison-row"><span>Annual premium</span><span>' + (v.annualPremium !== null && !noCurrentPremium ? fmt(v.annualPremium) : "\u2014") + '</span><span>' + (v.benchmarkAnnualPremium !== null ? fmt(v.benchmarkAnnualPremium) : "\u2014") + '</span></div>' +
+      '<div class="risk-comparison-row"><span>Max exposure</span><span>' + (v.maxOutOfPocket !== null ? fmt(v.maxOutOfPocket) : "\u2014") + '</span><span>' + fmt(v.benchmarkMaxOop) + '</span></div>' +
+      '<div class="risk-comparison-row risk-comparison-total"><span>Est. annual risk</span><span>' + (v.yourTotalRiskCost !== null && !noCurrentPremium ? fmt(v.yourTotalRiskCost) : "\u2014") + '</span><span>' + (v.benchmarkTotalRiskCost !== null ? fmt(v.benchmarkTotalRiskCost) : "\u2014") + '</span></div>' +
+      "</div>" +
+      (riskMultiplierText ? '<p class="result-risk-multiplier">' + riskMultiplierText + '</p>' : '') +
+      '<div class="chart-shell"><canvas id="risk-efficiency-chart" aria-label="Premium vs risk efficiency comparison" role="img"></canvas></div>' +
+      '<p class="result-note risk-interpretation">' + riskInterpretation + '</p>' +
+      '<p class="result-note">Estimated risk uses an 8% probability of a major medical event applied to maximum out-of-pocket exposure. ' + (v.timestamp || "") + '</p>' +
+      "</section>" +
+      '<section class="result-section">' +
+      "<h4>How healthcare cost exposure is structured</h4>" +
+      "<p>Annual premium represents recurring cost, while deductible and out-of-pocket limits represent thresholds where larger expenses can occur.</p>" +
+      '<div class="chart-shell"><canvas id="coverage-structure-chart" aria-label="Coverage cost structure" role="img"></canvas></div>' +
+      '<p class="result-note">' + benchmarkNote + ' <span class="result-timestamp">' + (v.timestamp || "") + "</span></p>" +
+      "</section>" +
+      '<section class="result-section result-education">' +
+      "<h4>How a major medical event is typically paid for</h4>" +
+      "<p>In a " + eventCostDisplay + " hospital event, costs are shared between you and the insurance carrier based on deductible, coinsurance, and out-of-pocket limits.</p>" +
+      '<div class="chart-shell"><canvas id="event-cost-chart" aria-label="Major medical event cost breakdown" role="img"></canvas></div>' +
+      '<p class="result-note">Even with insurance, major medical events often involve thousands in out-of-pocket costs before coverage reaches the maximum protection limit.</p>' +
+      "</section>" +
+      '<section class="result-section result-education">' +
+      "<h4>What your deductible and out-of-pocket limit mean</h4>" +
+      '<div class="result-key-metrics">' +
+      '<div class="metric-card">' +
+      '<p class="metric-label">Deductible</p>' +
+      '<p class="metric-value">The amount you pay before most insurance coverage begins.</p>' +
+      '<p class="result-note">Your estimated deductible: ' + deductibleDisplay + "</p>" +
+      '<p class="result-note">Typical range: $4,000\u2013$8,000 for many individual plans.</p>' +
+      "</div>" +
+      '<div class="metric-card">' +
+      '<p class="metric-label">Maximum out-of-pocket</p>' +
+      '<p class="metric-value">The maximum you may pay for covered services during a major medical year.</p>' +
+      '<p class="result-note">Your estimated max out-of-pocket: ' + maxOopDisplay + "</p>" +
+      '<p class="result-note">Typical range: $8,000\u2013$15,000 for many plans.</p>' +
+      "</div>" +
+      "</div>" +
+      '<p class="result-note">' + deductibleExample + "</p>" +
+      "</section>" +
+      '<section class="result-section result-insights">' +
+      "<h4>Insights from your benchmark</h4>" +
+      "<ul>" +
+      (function () {
+        var items = [];
+        if (!noCurrentPremium && premiumRatio !== null && premiumRatio > 1.3 && v.riskMultiplier !== null && v.riskMultiplier > 1.2) {
+          items.push("Your premium is significantly higher than benchmark plans.");
+          items.push("However, estimated maximum exposure remains similar to typical coverage structures.");
+          items.push("This suggests your plan may prioritize network access or lower deductibles rather than reducing total financial risk.");
+        } else if (!noCurrentPremium && premiumRatio !== null && premiumRatio < 0.7) {
+          items.push("Your premium is below benchmark, which may indicate higher cost-sharing in the event of a claim.");
+          items.push("Plans with lower premiums often carry higher deductibles that shift financial risk to you during major medical events.");
+          items.push("Understanding your maximum out-of-pocket limit is especially important with lower-premium plans.");
+        } else {
+          items.push("Many plans with lower premiums shift cost risk into higher deductibles.");
+          items.push("The combination of deductible and coinsurance determines your true financial exposure.");
+          items.push("Two plans with similar premiums can produce very different financial outcomes.");
+        }
+        return items.map(function (i) { return "<li>" + i + "</li>"; }).join("");
+      })() +
+      "</ul>" +
+      "</section>" +
+      '<section class="result-section result-cta-section">' +
+      "<h4>Review your coverage structure with a licensed advisor</h4>" +
+      "<p>Most people use this benchmark to identify potential coverage gaps, then review their options with a licensed advisor.</p>" +
+      "<p>The consultation can help with:</p>" +
+      "<ul>" +
+      "<li>Reviewing deductible and out-of-pocket structures</li>" +
+      "<li>Checking doctor and prescription compatibility</li>" +
+      "<li>Identifying plans with more predictable cost exposure</li>" +
+      "<li>Evaluating network access and coverage options</li>" +
+      "</ul>" +
+      "<p class=\"result-note\">Many households review their coverage structure every 1–2 years as plan pricing and network options change.</p>" +
       '<div class="result-cta-wrap"><a class="btn btn-primary result-cta-btn" href="' + ctaUrl + '" target="_blank" rel="noopener noreferrer">' + ctaPrimary + "</a></div>" +
       (ctaSub ? '<p class="sub result-cta-sub">' + ctaSub + "</p>" : "") +
+      "</section>" +
+      '<p class="result-meta-note">When you reach the end of this report, you should understand your premium benchmark, your potential financial exposure, how deductibles and out-of-pocket limits affect real costs, and why a professional review can help clarify your options.</p>' +
       '<p class="result-restart-wrap"><button type="button" class="btn-link result-restart-btn" id="result-restart-btn">Start over</button></p>';
     resultEl.className = "result " + resultType;
     var cardWrap = resultEl.querySelector(".result-card-wrap");
     if (cardWrap) cardWrap.innerHTML = cardHtml;
-    else resultEl.innerHTML = '<div class="result-and-calendly"><div class="result-card-wrap">' + cardHtml + '</div><div class="result-calendly-wrap"><div class="calendly-inline-widget" data-url="https://calendly.com/richards-health/30min?hide_gdpr_banner=1" style="min-width:320px;height:700px;"></div></div></div>';
+    else resultEl.innerHTML = '<div class="result-and-calendly"><div class="result-card-wrap">' + cardHtml + '</div></div>';
+
+    // Reuse existing Calendly widget from the layout and move it into the card
+    var existingCalendlyWrap = document.querySelector(".result-calendly-wrap");
+    var calendarSection = null;
+    if (existingCalendlyWrap) {
+      calendarSection = document.createElement("section");
+      calendarSection.className = "result-section result-calendar-section";
+      calendarSection.innerHTML =
+        "<h4>Schedule a coverage strategy call</h4>" +
+        "<p>Most consultations take about 10 minutes and help clarify how different plan structures affect your financial exposure.</p>" +
+        "<ul>" +
+        "<li>Licensed advisors</li>" +
+        "<li>No obligation consultation</li>" +
+        "<li>Private discussion</li>" +
+        "</ul>";
+      calendarSection.appendChild(existingCalendlyWrap);
+    }
+
+    var behaviorTarget = document.createElement("section");
+    behaviorTarget.className = "result-section result-behavior-widget";
+    behaviorTarget.innerHTML =
+        '<h3 class="result-behavior-title">What people with similar benchmarks usually do</h3>' +
+        '<p class="result-behavior-sub">When households see benchmark results like this, they typically take one of the following approaches.</p>' +
+        '<div class="result-behavior-grid">' +
+        '<div class="behavior-card">' +
+        "<h4>Stay with current plan</h4>" +
+        '<p class="behavior-outcome">Some households keep their existing coverage if it aligns with their expected healthcare needs.</p>' +
+        "</div>" +
+        '<div class="behavior-card">' +
+        "<h4>Switch marketplace plan</h4>" +
+        '<p class="behavior-outcome">Marketplace plans may offer different premium and deductible combinations depending on subsidy eligibility and plan selection.</p>' +
+        "</div>" +
+        '<div class="behavior-card">' +
+        "<h4>Explore private coverage options</h4>" +
+        '<p class="behavior-outcome">Some households review alternative plan structures that may provide broader networks or more predictable exposure.</p>' +
+        "</div>" +
+        "</div>" +
+        '<p class="result-note behavior-note">Many self-employed households review their coverage structure every 1–2 years as pricing and network options change.</p>';
+    if (cardWrap) {
+      var ctaSection = cardWrap.querySelector(".result-cta-section");
+      if (ctaSection) {
+        if (calendarSection) {
+          ctaSection.parentNode.insertBefore(calendarSection, ctaSection);
+          ctaSection.parentNode.insertBefore(behaviorTarget, calendarSection);
+        } else {
+          ctaSection.parentNode.insertBefore(behaviorTarget, ctaSection);
+        }
+      } else {
+        if (calendarSection) cardWrap.appendChild(calendarSection);
+        cardWrap.appendChild(behaviorTarget);
+      }
+    }
+
     resultEl.classList.remove("hidden");
     if (resultMetaEl) {
       resultMetaEl.classList.remove("hidden");
@@ -834,6 +1507,20 @@
         window.location.href = "/";
       });
     }
+
+    var disclosureToggle = resultEl.querySelector(".result-disclosure-toggle");
+    var disclosureBody = document.getElementById("result-disclosure-body");
+    if (disclosureToggle && disclosureBody) {
+      disclosureToggle.addEventListener("click", function () {
+        var isExpanded = disclosureToggle.getAttribute("aria-expanded") === "true";
+        disclosureToggle.setAttribute("aria-expanded", isExpanded ? "false" : "true");
+        disclosureBody.classList.toggle("hidden", isExpanded);
+      });
+    }
+
+    ensureChartJs(function () {
+      initResultEnhancements(report);
+    });
   }
 
   function buildBenchmarkContext(resultType, benchmark, primaryPayload) {
@@ -916,30 +1603,61 @@
     var spouseCount = people.filter(function (p) { return p.role === "spouse"; }).length;
     var childCount = people.filter(function (p) { return p.role === "child"; }).length;
     var multiplier = Number(window.MULTIPLIER || 11.5);
-    var benchmark = Math.max(100, (age * multiplier) + 120 + (childCount * 70) + (spouseCount ? 90 : 0));
+    var formulaBenchmark = Math.max(100, (age * multiplier) + 120 + (childCount * 70) + (spouseCount ? 90 : 0));
     var noCurrentPremium = primary.no_current_premium === "yes";
     var premium = Number(primary.premium || 0);
-    var resultType = classifyResult(premium, benchmark, noCurrentPremium);
+
+    var coverageStatusEl = document.getElementById("coverage-status");
+    var planTypeEl = document.getElementById("current-plan-type");
+    var coverageStatusVal = coverageStatusEl ? (coverageStatusEl.value || "") : "";
+    var currentPlanTypeVal = planTypeEl ? (planTypeEl.value || "") : "";
+    var planType = classifyPlanType(coverageStatusVal, currentPlanTypeVal);
+
+    var report = window.buildResolvedBenchmarkReport({
+      monthlyPremium: noCurrentPremium ? null : premium,
+      noCurrentPremium: noCurrentPremium,
+      householdSize: people.length,
+      state: (pageContext.state || "").toUpperCase() || null,
+      planType: planType,
+      formulaBenchmark: formulaBenchmark,
+      deductible: null,
+      coinsuranceRate: null,
+      maxOutOfPocket: null
+    });
+
+    var effectiveBenchmark = report.values.directionalBenchmark || formulaBenchmark;
+    var resultType = classifyResult(premium, effectiveBenchmark, noCurrentPremium);
+    report.resultType = resultType;
 
     var householdId = "hh_" + Date.now() + "_" + Math.random().toString(36).slice(2, 11);
-    var context = buildBenchmarkContext(resultType, benchmark, primary);
+    var context = buildBenchmarkContext(resultType, effectiveBenchmark, primary);
 
-    if (flowShell) flowShell.classList.add("hidden");
-    renderResult(resultType, premium, benchmark, noCurrentPremium);
-    if (window.rhTrack) window.rhTrack("result_view", { result_type: resultType, benchmark: Math.round(benchmark), premium: premium, no_current_premium: noCurrentPremium ? "yes" : "no" });
+    if (flowShell) {
+      flowShell.classList.add("hidden");
+      var introCard = flowShell.previousElementSibling;
+      if (introCard && introCard.classList.contains("card")) {
+        introCard.classList.add("hidden");
+      }
+    }
+    renderResult(report);
+    if (resultEl && typeof resultEl.scrollIntoView === "function") {
+      resultEl.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    if (window.rhTrack) window.rhTrack("result_view", { result_type: resultType, benchmark: Math.round(effectiveBenchmark), premium: premium, no_current_premium: noCurrentPremium ? "yes" : "no" });
 
     if (window.rhTrack) window.rhTrack("submission_sent", { page_id: pageContext.page_id || "", result_type: resultType, household_size: people.length });
     people.forEach(function (person) {
       sendPayload(buildPersonPayload(person, householdId, context));
     });
     if (window.rhTrack) window.rhTrack("submission_success", { page_id: pageContext.page_id || "" });
-    saveCompletedResult(resultType, premium, benchmark, noCurrentPremium);
+    saveCompletedResult(report);
   }
 
   function handleNext() {
     var step = state.currentStep;
     if (!validateStep(step)) return;
     if (window.rhTrack) window.rhTrack("step_complete", { step_number: step, page_id: pageContext.page_id || "" });
+    showMomentumMessage(step);
     if (step === 1) {
       var route = getContextRoute(state.selectedSituation);
       if (route) {
@@ -972,7 +1690,25 @@
   })();
 
   function wireEvents() {
-    form.addEventListener("input", saveFlowStateDebounced);
+    form.addEventListener("input", function (event) {
+      var target = event.target;
+      if (target && target.id === "premium-slider") {
+        var premiumInput = document.getElementById("premium");
+        if (premiumInput) premiumInput.value = target.value;
+      }
+      if (target && target.id === "premium") {
+        var slider = document.getElementById("premium-slider");
+        if (slider) {
+          var v = parseNum(target.value);
+          if (Number.isFinite(v)) {
+            var max = parseNum(slider.max) || 1500;
+            var min = parseNum(slider.min) || 0;
+            slider.value = String(Math.max(min, Math.min(v, max)));
+          }
+        }
+      }
+      saveFlowStateDebounced();
+    });
     form.addEventListener("change", saveFlowStateDebounced);
     form.addEventListener("click", function (event) {
       var target = event.target;
@@ -1024,16 +1760,32 @@
           if (row.parentNode) removeFromDom();
         }, 250);
       }
+      if (target.matches(".household-preset")) {
+        event.preventDefault();
+        var preset = target.getAttribute("data-preset");
+        if (preset) applyHouseholdPreset(preset);
+      }
+      if (target.matches("#premium-unknown")) {
+        event.preventDefault();
+        var btn = target;
+        var isActive = btn.getAttribute("data-unknown") === "1";
+        var premiumInput = document.getElementById("premium");
+        var slider = document.getElementById("premium-slider");
+        if (!isActive) {
+          btn.setAttribute("data-unknown", "1");
+          if (premiumInput) premiumInput.value = "";
+        } else {
+          btn.removeAttribute("data-unknown");
+        }
+        if (slider && premiumInput && premiumInput.value) {
+          slider.value = Math.max(0, Math.min(parseNum(premiumInput.value) || 0, parseNum(slider.max) || 1500));
+        }
+      }
       if (target.matches(".situation-option")) {
         event.preventDefault();
         state.selectedSituation = target.getAttribute("data-situation") || "";
         state.situationSource = "user_select";
-        form.querySelectorAll(".situation-option").forEach(function (btn) {
-          btn.classList.remove("btn-primary");
-          btn.classList.add("btn-outline");
-        });
-        target.classList.remove("btn-outline");
-        target.classList.add("btn-primary");
+        syncSituationSelectionUI();
       }
     });
 
@@ -1058,12 +1810,22 @@
   resolveVisibleSteps();
   ensureIntroCardHeading();
   buildSituationOptions();
+  ensureMomentumMessageElement();
   if (document.getElementById("household-step-inner")) buildHouseholdStep();
   wireEvents();
   var saved = loadFlowState();
   if (saved && saved.completed) {
     if (flowShell) flowShell.classList.add("hidden");
-    renderResult(saved.resultType || "ballpark", saved.premium || 0, saved.benchmark || 0, saved.noCurrentPremium === "yes");
+    var restoredInput = saved.reportInput || {
+      monthlyPremium: saved.noCurrentPremium === "yes" ? null : (saved.premium || 0),
+      noCurrentPremium: saved.noCurrentPremium === "yes",
+      householdSize: saved.householdSize || 1,
+      state: (pageContext.state || "").toUpperCase() || null,
+      formulaBenchmark: saved.benchmark || 0
+    };
+    var restoredReport = window.buildResolvedBenchmarkReport(restoredInput);
+    restoredReport.resultType = saved.resultType || "ballpark";
+    renderResult(restoredReport);
     if (resultMetaEl) {
       resultMetaEl.classList.remove("hidden");
       resultMetaEl.textContent = "Result based on submitted household, premium, and qualifying information.";
