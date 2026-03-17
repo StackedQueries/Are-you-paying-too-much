@@ -169,7 +169,7 @@
         if (first) requestAnimationFrame(function () { first.focus(); });
         if (flowStartOverWrap) flowStartOverWrap.setAttribute("aria-hidden", stepNum >= 2 ? "false" : "true");
         saveFlowState();
-        if (flowShell && typeof flowShell.scrollIntoView === "function") {
+        if (stepNum > 2 && flowShell && typeof flowShell.scrollIntoView === "function") {
           flowShell.scrollIntoView({ behavior: "smooth", block: "start" });
         }
       });
@@ -188,7 +188,7 @@
     if (first) requestAnimationFrame(function () { first.focus(); });
     if (flowStartOverWrap) flowStartOverWrap.setAttribute("aria-hidden", stepNum >= 2 ? "false" : "true");
     saveFlowState();
-    if (flowShell && typeof flowShell.scrollIntoView === "function") {
+    if (stepNum > 2 && flowShell && typeof flowShell.scrollIntoView === "function") {
       flowShell.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }
